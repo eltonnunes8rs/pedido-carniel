@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 16:02 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 16:40 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -56,10 +56,11 @@
 var BAIRROS=[{n:"Centro",t:5},{n:"Jardim das Flores",t:7},{n:"Vila Nova",t:8}];
 var GRUPOS=[
  {id:"marmitas",nome:"Marmitas",itens:[{id:1,nome:"Marmita P",preco:22},{id:2,nome:"Marmita M",preco:28},{id:3,nome:"Marmita G",preco:34}]},
- {id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"P1",nome:"Personalizada P",preco:null},{id:"P2",nome:"Personalizada G",preco:null}]},
+ {id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"PERS",nome:"Personalizada",preco:null}]},
  {id:"bebidas",nome:"Bebidas",itens:[{id:10,nome:"Coca-Cola lata",preco:6},{id:11,nome:"Suco 500 ml",preco:7},{id:12,nome:"Água",preco:3}]}
 ];
-var BUFFET_HOJE=["Arroz","Feijão","Feijoada","Frango assado","Carne de panela","Purê de batata","Macarrão","Salada de alface","Farofa","Legumes refogados"];
+/* Itens do buffet: lista real do cardápio de 17/11 (Cardápio Completo + Carnes), só para ver como fica */
+var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
 
@@ -92,6 +93,7 @@ function vMenu(){
  var h='<header>Cardápio de hoje<small>'+(S.modo||'')+'</small></header><div class="tabs">';
  GRUPOS.forEach(function(g){h+='<button class="'+(g.id===S.grupo?"on":"")+'" onclick="S.grupo=\''+g.id+'\';render()">'+esc(g.nome)+'</button>'});
  h+='</div>';
+ if(grupoDe(S.grupo).tipo==="pers")h+='<div class="aviso" style="background:#e8f1ff;color:#0b4ea2">Monte a sua marmita marcando os itens. O valor é definido na pesagem. Quer outra diferente? Monte de novo e insira outra Personalizada.</div>';
  grupoDe(S.grupo).itens.forEach(function(i){
   h+='<div class="item" onclick="abrirItem(\''+S.grupo+'\',\''+i.id+'\')"><span>'+esc(i.nome)+'</span>'+(i.preco==null?'<span class="p ac">preço na pesagem</span>':'<span class="p">'+brl(i.preco)+'</span>')+'</div>';
  });
@@ -107,8 +109,8 @@ function vSheet(){
   h+='<div class="peq">Itens do buffet de hoje — marque o que quiser:</div>';
   BUFFET_HOJE.forEach(function(n,k){h+='<label class="ck"><input type="checkbox" '+(s.marcados.indexOf(n)>=0?"checked":"")+' onchange="marcar(\''+n.replace(/'/g,"\\'")+'\')"> '+esc(n)+'</label>'});
  }
- h+='<div class="qty"><button onclick="mudaQtd(-1)">−</button><span>'+s.qtd+'</span><button onclick="mudaQtd(1)">+</button></div>';
- h+='<textarea id="obs" rows="2" placeholder="Observação do item (opcional)" oninput="S.sheet.obs=this.value">'+esc(s.obs)+'</textarea>';
+ if(!s.pers)h+='<div class="qty"><button onclick="mudaQtd(-1)">−</button><span>'+s.qtd+'</span><button onclick="mudaQtd(1)">+</button></div>';
+ h+='<textarea id="obs" rows="2" placeholder="Observação (opcional)" oninput="S.sheet.obs=this.value">'+esc(s.obs)+'</textarea>';
  var sub=s.item.preco==null?"valor na pesagem":brl(s.item.preco*s.qtd);
  h+='<button class="btn" onclick="inserir()">Inserir no carrinho — '+sub+'</button><button class="btn sec" onclick="S.sheet=null;render()">Cancelar</button></div></div>';
  return h;
@@ -118,15 +120,17 @@ function mudaQtd(d){S.sheet.qtd=Math.max(1,S.sheet.qtd+d);var o=S.sheet.obs;rend
 function inserir(){
  var s=S.sheet;
  if(s.pers&&s.marcados.length===0){alert("Marque pelo menos um item do buffet.");return}
- S.cart.push({nome:s.item.nome,preco:s.item.preco,qtd:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice()});
- S.sheet=null;render();
+ S.cart.push({nome:s.item.nome,preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers});
+ renum();S.sheet=null;render();
 }
+/* Personalizadas: 1 só = "Personalizada"; 2 ou mais = "Personalizada 1", "Personalizada 2"... */
+function renum(){var ps=S.cart.filter(function(l){return l.pers});ps.forEach(function(l,k){l.nome=ps.length>1?"Personalizada "+(k+1):"Personalizada"})}
 function vCart(){
  var h='<header>Carrinho<small>'+(S.modo||'')+'</small></header><div class="pad">';
  if(!S.cart.length){return h+'<p>Seu carrinho está vazio.</p><button class="btn sec" onclick="ir(\'menu\')">Ver o cardápio</button></div>'}
  S.cart.forEach(function(l,k){
   h+='<div class="box"><b>'+esc(l.nome)+'</b>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')+
-  '<div class="qty"><button onclick="cartQtd('+k+',-1)">−</button><span>'+l.qtd+'</span><button onclick="cartQtd('+k+',1)">+</button><span style="margin-left:auto;font-size:15px">'+(l.preco==null?'valor na pesagem':brl(l.preco*l.qtd))+'</span></div></div>';
+  (l.pers?'<div class="linha"><button class="rm" onclick="cartQtd('+k+',-1)">Remover</button><span style="font-size:15px">valor na pesagem</span></div></div>':'<div class="qty"><button onclick="cartQtd('+k+',-1)">−</button><span>'+l.qtd+'</span><button onclick="cartQtd('+k+',1)">+</button><span style="margin-left:auto;font-size:15px">'+(l.preco==null?'valor na pesagem':brl(l.preco*l.qtd))+'</span></div></div>');
  });
  h+='<div class="peq">Quer adicionar alguma bebida?</div>';
  grupoDe("bebidas").itens.forEach(function(b){h+='<span class="chip" onclick="addBebida('+b.id+')">+ '+esc(b.nome)+' '+brl(b.preco)+'</span>'});
@@ -134,7 +138,7 @@ function vCart(){
  h+='<div class="linha tot"><span>Subtotal</span><span>'+brl(t.sub)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem.</div>':'');
  return h+'<button class="btn" onclick="ir(\'checkout\')">Fechar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Adicionar mais itens</button></div>';
 }
-function cartQtd(k,d){S.cart[k].qtd+=d;if(S.cart[k].qtd<1)S.cart.splice(k,1);render()}
+function cartQtd(k,d){S.cart[k].qtd+=d;if(S.cart[k].qtd<1)S.cart.splice(k,1);renum();render()}
 function addBebida(id){var b=grupoDe("bebidas").itens.filter(function(x){return x.id===id})[0];var ex=S.cart.filter(function(l){return l.nome===b.nome&&!l.obs})[0];if(ex)ex.qtd++;else S.cart.push({nome:b.nome,preco:b.preco,qtd:1,obs:"",marcados:[]});render()}
 
 function vCheckout(){
