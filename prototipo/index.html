@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:00 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 17:15 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -54,18 +54,14 @@
 <script>
 /* ===== DADOS DE EXEMPLO (no app de verdade virão do banco) ===== */
 var BAIRROS=[{n:"Na cidade",t:2},{n:"Fazenda Caldato",t:4},{n:"Luke",t:4},{n:"Cerro Azul",t:15}];  // locais reais (carniel_taxas_locais); cidade = taxa padrão
-var GRUPOS=[
- {id:"marmitas",nome:"Marmitas",itens:[{id:1,nome:"Marmita P",preco:22},{id:2,nome:"Marmita M",preco:28},{id:3,nome:"Marmita G",preco:34}]},
- {id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"PERS",nome:"Personalizada",preco:null}]},
- {id:"bebidas",nome:"Bebidas",itens:[{id:10,nome:"Coca-Cola lata",preco:6},{id:11,nome:"Suco 500 ml",preco:7},{id:12,nome:"Água",preco:3}]}
-];
+var GRUPOS=[{"id": "ofertas", "nome": "Ofertas", "itens": [{"id": 1, "nome": "Boa do Dia", "preco": 24, "desc": "Arroz, Mandioca, Carne de porco frita, Banana frita, Salada"}, {"id": 2, "nome": "Econômica", "preco": 22, "desc": "Arroz, Feijão, Ovo frito, Batata, Bife de gado ou filé de frango"}, {"id": 3, "nome": "Fit do Dia", "preco": 24, "desc": "Arroz integral, Feijão, Couve refogada, Ovo cozido, Filé de frango na chapa, Salada, Frutas"}, {"id": 4, "nome": "Meteoro da Paixão", "preco": 20, "desc": "Arroz, Frango desfiado com creme de milho, Batata palha"}]}, {"id": "marmitas", "nome": "Marmitas", "itens": [{"id": 10, "nome": "Marmita P", "preco": 25, "desc": "A cozinha monta com o buffet do dia"}, {"id": 11, "nome": "Marmita M", "preco": 27}, {"id": 12, "nome": "Marmita G", "preco": 30}, {"id": 13, "nome": "Marmita P — feijão separado", "preco": 30}, {"id": 14, "nome": "Marmita M — feijão separado", "preco": 32}, {"id": 15, "nome": "Marmita G — feijão separado", "preco": 35}, {"id": 16, "nome": "Marmita M dupla", "preco": 42}, {"id": 17, "nome": "Marmita G dupla", "preco": 45}]}, {"id": "pers", "nome": "Personalizada", "tipo": "pers", "itens": [{"id": "PERS", "nome": "Personalizada", "preco": null}]}, {"id": "pizza", "nome": "Pizzas", "aviso": "Pizza crua ou assada: escreva na observação qual você quer.", "itens": [{"id": 20, "nome": "Pizza de Mussarela", "preco": 40}, {"id": 21, "nome": "Pizza de Calabresa", "preco": 40}, {"id": 22, "nome": "Pizza de Frango", "preco": 40}]}, {"id": "saladas", "nome": "Saladas", "itens": [{"id": 30, "nome": "Maionese de batata", "preco": 20}, {"id": 30, "nome": "Maionese de maçã", "preco": 20}, {"id": 30, "nome": "Saladas diversas", "preco": 20}, {"id": 30, "nome": "Queijos variados", "preco": 20}]}, {"id": "tapiocas", "nome": "Tapiocas", "itens": [{"id": 40, "nome": "Frango com queijo e orégano", "preco": 21}, {"id": 41, "nome": "Presunto, queijo, tomate e orégano", "preco": 21}, {"id": 42, "nome": "Queijo, brócolis, bacon e orégano", "preco": 21}, {"id": 43, "nome": "Tapioca de três queijos", "preco": 21}, {"id": 44, "nome": "Queijo, calabresa, tomate e orégano", "preco": 21}, {"id": 45, "nome": "Frango com catupiry e orégano", "preco": 21}, {"id": 46, "nome": "Goiabada com queijo", "preco": 21}, {"id": 47, "nome": "Nutella com banana ou doce de leite", "preco": 21}, {"id": 48, "nome": "Nutella com morango", "preco": 21}, {"id": 49, "nome": "KitKat e queijo", "preco": 21}, {"id": 50, "nome": "Galak e queijo", "preco": 21}, {"id": 51, "nome": "Prestígio", "preco": 21}, {"id": 52, "nome": "Ovomaltine", "preco": 21}, {"id": 53, "nome": "Leite Ninho com morango ou banana", "preco": 21}]}, {"id": "bebidas", "nome": "Bebidas", "itens": [{"id": 60, "nome": "Coca-Cola lata", "preco": 6}, {"id": 61, "nome": "Suco 500 ml", "preco": 7}, {"id": 62, "nome": "Água", "preco": 3}]}];  // ofertas de 22/11 (cardápio real); bebidas ainda de exemplo
 /* Itens do buffet: lista real do cardápio de 17/11 (Cardápio Completo + Carnes), só para ver como fica */
 var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
 
 /* ===== ESTADO ===== */
-var S={view:"home",modo:null,grupo:"marmitas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
+var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
 try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
 function salvar(){try{localStorage.setItem("pc_pedidos",JSON.stringify(S.pedidos));localStorage.setItem("pc_end",JSON.stringify(S.enderecos));}catch(e){}}
 
@@ -94,8 +90,9 @@ function vMenu(){
  GRUPOS.forEach(function(g){h+='<button class="'+(g.id===S.grupo?"on":"")+'" onclick="S.grupo=\''+g.id+'\';render()">'+esc(g.nome)+'</button>'});
  h+='</div>';
  if(grupoDe(S.grupo).tipo==="pers")h+='<div class="aviso" style="background:#e8f1ff;color:#0b4ea2">Monte a sua marmita marcando os itens. O valor é definido na pesagem. Quer outra diferente? Monte de novo e insira outra Personalizada.</div>';
+ if(grupoDe(S.grupo).aviso)h+='<div class="aviso" style="background:#e8f1ff;color:#0b4ea2">'+esc(grupoDe(S.grupo).aviso)+'</div>';
  grupoDe(S.grupo).itens.forEach(function(i){
-  h+='<div class="item" onclick="abrirItem(\''+S.grupo+'\',\''+i.id+'\')"><span>'+esc(i.nome)+'</span>'+(i.preco==null?'<span class="p ac">preço na pesagem</span>':'<span class="p">'+brl(i.preco)+'</span>')+'</div>';
+  h+='<div class="item" onclick="abrirItem(\''+S.grupo+'\',\''+i.id+'\')"><span>'+esc(i.nome)+(i.desc?'<small style="display:block;font-size:12px;color:#777;font-weight:400">'+(S.grupo==="ofertas"?"Hoje: ":"")+esc(i.desc)+'</small>':'')+'</span>'+(i.preco==null?'<span class="p ac">preço na pesagem</span>':'<span class="p">'+brl(i.preco)+'</span>')+'</div>';
  });
  return h;
 }
