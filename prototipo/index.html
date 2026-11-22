@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 14:30 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 14:50 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -8,7 +8,7 @@
 <style>
   *{box-sizing:border-box}
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;color:#222}
-  #app{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;padding-bottom:84px}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;padding-bottom:130px}
   header{background:#b30000;color:#fff;padding:14px 16px;font-size:18px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}
   header small{font-weight:normal;font-size:12px;opacity:.9}
   .aviso{background:#fff3cd;color:#664d03;padding:8px 14px;font-size:12px}
@@ -42,6 +42,10 @@
   pre{white-space:pre-wrap;background:#f1f8f1;border:1px solid #bfe0bf;border-radius:8px;padding:12px;font-size:14px;margin:8px 0}
   .peq{font-size:12px;color:#777}
   .rm{color:#b30000;background:none;border:0;font-size:13px;padding:0}
+  .logo{width:38px;height:38px;border-radius:50%;margin-right:10px;vertical-align:middle;background:#fff}
+  .barra{position:fixed;left:0;right:0;bottom:44px;max-width:480px;margin:0 auto;background:#0a7a3d;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:16px;cursor:pointer;z-index:4;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
+  .barra b{font-size:18px}
+  .barra small{display:block;font-size:11px;opacity:.9}
 </style>
 </head>
 <body>
@@ -75,7 +79,7 @@ function ir(v){S.view=v;render();window.scrollTo(0,0)}
 
 /* ===== TELAS ===== */
 function vHome(){
- var h='<header>Restaurante Carniel<small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
+ var h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
  if(ABERTO){
   h+='<h2>Como quer receber?</h2><button class="btn" onclick="escolherModo(\'Entrega\')">🛵 Entrega</button><button class="btn" onclick="escolherModo(\'Retirada\')">🏪 Retirada</button>';
  }else{
@@ -128,13 +132,16 @@ function vCart(){
  grupoDe("bebidas").itens.forEach(function(b){h+='<span class="chip" onclick="addBebida('+b.id+')">+ '+esc(b.nome)+' '+brl(b.preco)+'</span>'});
  var t=totais(S.cart,0);
  h+='<div class="linha tot"><span>Subtotal</span><span>'+brl(t.sub)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem.</div>':'');
- return h+'<button class="btn" onclick="ir(\'checkout\')">Continuar</button><button class="btn sec" onclick="ir(\'menu\')">Adicionar mais itens</button></div>';
+ return h+'<button class="btn" onclick="ir(\'checkout\')">Fechar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Adicionar mais itens</button></div>';
 }
 function cartQtd(k,d){S.cart[k].qtd+=d;if(S.cart[k].qtd<1)S.cart.splice(k,1);render()}
 function addBebida(id){var b=grupoDe("bebidas").itens.filter(function(x){return x.id===id})[0];var ex=S.cart.filter(function(l){return l.nome===b.nome&&!l.obs})[0];if(ex)ex.qtd++;else S.cart.push({nome:b.nome,preco:b.preco,qtd:1,obs:"",marcados:[]});render()}
 
 function vCheckout(){
- var h='<header>Finalizar<small>'+(S.modo||'')+'</small></header><div class="pad">';
+ var h='<header>Fechar pedido<small>'+(S.modo||'')+'</small></header><div class="pad">';
+ h+='<div class="box"><b>Seu pedido</b>';
+ S.cart.forEach(function(l){h+='<div class="linha"><span>'+l.qtd+'x '+esc(l.nome)+'</span><span>'+(l.preco==null?'a pesar':brl(l.preco*l.qtd))+'</span></div>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')});
+ h+='<button class="rm" onclick="ir(\'cart\')">Alterar itens</button></div>';
  if(S.modo==="Entrega"){
   h+='<h2>Endereço</h2>';
   S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+'</span>'});
@@ -150,7 +157,7 @@ function vCheckout(){
  var t=totais(S.cart,taxaAtual());
  h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+(S.end.bairro?brl(t.taxa):"escolha o bairro")+'</span></div>':'')+
  '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
- return h+'<button class="btn" onclick="finalizar()">Finalizar pedido</button><button class="btn sec" onclick="ir(\'cart\')">Voltar ao carrinho</button></div>';
+ return h+'<button class="btn" onclick="finalizar()">Enviar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Voltar ao cardápio</button></div>';
 }
 function usaEnd(k){S.end=JSON.parse(JSON.stringify(S.enderecos[k]));render()}
 function finalizar(){
@@ -199,9 +206,10 @@ function render(){
  else if(v==="done")h=vDone();
  else if(v==="pedidos")h=vPedidos();
  if(ABERTO===false||true){h='<div class="aviso">PROTÓTIPO com dados de exemplo — nada aqui vai para o restaurante.</div>'+h}
+ var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
+ if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
  if(S.sheet)h+=vSheet();
  $("#app").innerHTML=h;
- var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
  var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
  $("#nav").innerHTML=tabs.map(function(t){var on=(v===t[0])||(t[0]==="home"&&(v==="menu"))||(t[0]==="cart"&&v==="checkout")||(t[0]==="pedidos"&&v==="done");return '<button class="'+(on?"on":"")+'" onclick="ir(\''+t[0]+'\')">'+t[1]+'</button>'}).join("");
 }
