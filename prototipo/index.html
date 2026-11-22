@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 18:15 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 18:25 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -67,7 +67,9 @@ var API="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/cardapio";
 /* ===== ESTADO ===== */
 var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
 try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
-function salvar(){try{localStorage.setItem("pc_pedidos",JSON.stringify(S.pedidos));localStorage.setItem("pc_end",JSON.stringify(S.enderecos));}catch(e){}}
+function hojeTxt(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+try{var C=JSON.parse(localStorage.getItem("pc_cart")||"null");if(C&&C.dia===hojeTxt()){S.cart=C.cart||[];S.modo=C.modo||null;S.end=C.end||S.end;S.pag=C.pag||S.pag;S.troco=C.troco||""}}catch(e){}
+function salvar(){try{localStorage.setItem("pc_pedidos",JSON.stringify(S.pedidos));localStorage.setItem("pc_end",JSON.stringify(S.enderecos));localStorage.setItem("pc_cart",JSON.stringify({dia:hojeTxt(),cart:S.cart,modo:S.modo,end:S.end,pag:S.pag,troco:S.troco}));}catch(e){}}
 
 /* ===== UTIL ===== */
 function $(s){return document.querySelector(s)}
@@ -112,7 +114,7 @@ function vSheet(){
  }
  if(s.opcoes){h+='<div class="peq">Escolha:</div>';s.opcoes.forEach(function(o){h+='<label class="ck"><input type="radio" name="esc" '+(s.esc===o?'checked':'')+' onchange="S.sheet.esc=\''+o+'\'"> '+o+'</label>'})}
  if(!s.pers)h+='<div class="qty"><button onclick="mudaQtd(-1)">−</button><span>'+s.qtd+'</span><button onclick="mudaQtd(1)">+</button></div>';
- h+='<textarea id="obs" rows="2" placeholder="Observação (opcional)" oninput="S.sheet.obs=this.value">'+esc(s.obs)+'</textarea>';
+ h+='<textarea id="obs" rows="2" placeholder="Observação (opcional)" oninput="S.sheet.obs=this.value;salvar()">'+esc(s.obs)+'</textarea>';
  var sub=s.item.preco==null?"valor na pesagem":brl(s.item.preco*s.qtd);
  h+='<button class="btn" onclick="inserir()">Inserir no carrinho — '+sub+'</button><button class="btn sec" onclick="S.sheet=null;render()">Cancelar</button></div></div>';
  return h;
@@ -153,14 +155,14 @@ function vCheckout(){
   h+='<h2>Endereço</h2>';
   S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+'</span>'});
   h+='<select onchange="S.end.bairro=this.value;render()">'+BAIRROS.map(function(b){return '<option '+(S.end.bairro===b.n?"selected":"")+'>'+esc(b.n)+'</option>'}).join("")+'</select>'+
-  '<input placeholder="Rua" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value">'+
-  '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value">'+
-  '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value">'+
-  '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value">';
+  '<input placeholder="Rua" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
+  '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value;salvar()">'+
+  '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
+  '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
  }
  h+='<h2>Pagamento (na entrega/retirada)</h2>';
  ["Pix","Cartão","Dinheiro"].forEach(function(p){h+='<label class="ck"><input type="radio" name="pag" '+(S.pag===p?"checked":"")+' onchange="S.pag=\''+p+'\';render()"> '+p+'</label>'});
- if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value">';
+ if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value;salvar()">';
  var t=totais(S.cart,taxaAtual());
  h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+brl(t.taxa)+'</span></div>':'')+
  '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
@@ -206,6 +208,7 @@ function pesar(k){var p=S.pedidos[k];p.itens.forEach(function(i){if(i.preco==nul
 
 /* ===== MONTAGEM ===== */
 function render(){
+ salvar();
  if(STATUS!=="ok"){
   var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.href=location.pathname">Tentar de novo</button>';
   $("#app").innerHTML='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span></header><div class="pad">'+m+'</div>';$("#nav").innerHTML="";return;
