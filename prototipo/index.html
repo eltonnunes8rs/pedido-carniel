@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:30 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 17:25 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -59,6 +59,8 @@ var GRUPOS=[{"id": "ofertas", "nome": "Ofertas", "itens": [{"id": 1, "nome": "Bo
 var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
+var REAL=false;  // true quando o cardápio veio do banco (n8n)
+var API="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/cardapio";
 
 /* ===== ESTADO ===== */
 var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
@@ -209,7 +211,7 @@ function render(){
  else if(v==="checkout")h=S.cart.length?vCheckout():vCart();
  else if(v==="done")h=vDone();
  else if(v==="pedidos")h=vPedidos();
- if(ABERTO===false||true){h='<div class="aviso">PROTÓTIPO com dados de exemplo — nada aqui vai para o restaurante.</div>'+h}
+ if(ABERTO===false||true){h='<div class="aviso">'+(REAL?'PROTÓTIPO — cardápio e preços reais do banco; o pedido ainda NÃO vai para o restaurante.':'PROTÓTIPO com dados de exemplo — nada aqui vai para o restaurante.')+'</div>'+h}
  var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
  if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
  if(S.sheet)h+=vSheet();
@@ -217,6 +219,28 @@ function render(){
  var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
  $("#nav").innerHTML=tabs.map(function(t){var on=(v===t[0])||(t[0]==="home"&&(v==="menu"))||(t[0]==="cart"&&v==="checkout")||(t[0]==="pedidos"&&v==="done");return '<button class="'+(on?"on":"")+'" onclick="ir(\''+t[0]+'\')">'+t[1]+'</button>'}).join("");
 }
+/* ===== Cardápio real (n8n -> Postgres). Se falhar, fica o de exemplo acima ===== */
+function aplicaApi(d){
+ var G=[];
+ if(d.ofertas&&d.ofertas.length)G.push({id:"ofertas",nome:"Ofertas",itens:d.ofertas.map(function(o,k){return{id:"o"+k,nome:o.nome,preco:Number(o.preco),desc:o.itens}})});
+ if(d.tamanhos&&d.tamanhos.length)G.push({id:"marmitas",nome:"Marmitas",itens:d.tamanhos.map(function(t,k){return{id:"t"+k,nome:t.nome.replace(" c/ feijão separado"," — feijão separado"),preco:Number(t.preco)}})});
+ G.push({id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"PERS",nome:"Personalizada",preco:null}]});
+ (d.por_unidade||[]).forEach(function(g){
+  var pz=g.tipo==="PIZZA_CRUA_OU_ASSADA",id=pz?"pizza":(g.tipo==="SALADAS"?"saladas":"tapiocas");
+  var o={id:id,nome:pz?"Pizzas":(g.tipo==="SALADAS"?"Saladas":"Tapiocas"),itens:(g.itens||[]).map(function(i){return{id:"u"+i.id,nome:(pz?"Pizza de ":"")+i.nome,preco:Number(g.preco)}})};
+  if(pz)o.escolha=["Crua","Assada"];
+  G.push(o)});
+ if(d.bebidas&&d.bebidas.length)G.push({id:"bebidas",nome:"Bebidas",itens:d.bebidas.map(function(b){return{id:"b"+b.id,nome:b.nome,preco:Number(b.preco)}})});
+ if(G.length<3)throw new Error("cardapio vazio");
+ GRUPOS=G;
+ if(d.buffet&&d.buffet.length)BUFFET_HOJE=d.buffet;
+ var padrao=Number(d.taxa_padrao);if(isNaN(padrao))padrao=2;
+ BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
+ if(d.horario&&d.agora&&location.search.indexOf("fechado")<0){ABERTO=d.agora>=d.horario.horario_abre&&d.agora<d.horario.horario_fecha}
+ S.grupo=G[0].id;REAL=true;
+}
+try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);render()}).catch(function(e){console.log("API falhou, usando exemplo",e)})}catch(e){}
+
 render();
 </script>
 </body>
