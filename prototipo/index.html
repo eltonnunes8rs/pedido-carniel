@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:35 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 17:45 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -60,7 +60,7 @@ var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
 var REAL=false;
-var STATUS=location.search.indexOf("exemplo")>=0?"ok":"carregando";  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo)
+var STATUS=location.search.indexOf("falha")>=0?"falha":(location.search.indexOf("exemplo")>=0?"ok":"carregando");  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo; ?falha=1 mostra a tela de falha)
 var ZAP="554991680422";  // WhatsApp do restaurante (confirmar)  // true quando o cardápio veio do banco (n8n)
 var API="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/cardapio";
 
