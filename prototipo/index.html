@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:25 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 17:35 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -59,7 +59,9 @@ var GRUPOS=[{"id": "ofertas", "nome": "Ofertas", "itens": [{"id": 1, "nome": "Bo
 var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
-var REAL=false;  // true quando o cardápio veio do banco (n8n)
+var REAL=false;
+var STATUS=location.search.indexOf("exemplo")>=0?"ok":"carregando";  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo)
+var ZAP="554991680422";  // WhatsApp do restaurante (confirmar)  // true quando o cardápio veio do banco (n8n)
 var API="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/cardapio";
 
 /* ===== ESTADO ===== */
@@ -203,6 +205,10 @@ function pesar(k){var p=S.pedidos[k];p.itens.forEach(function(i){if(i.preco==nul
 
 /* ===== MONTAGEM ===== */
 function render(){
+ if(STATUS!=="ok"){
+  var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.reload()">Tentar de novo</button>';
+  $("#app").innerHTML='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span></header><div class="pad">'+m+'</div>';$("#nav").innerHTML="";return;
+ }
  var v=S.view,h="";
  if(!ABERTO&&(v==="menu"||v==="cart"||v==="checkout"))v="home";
  if(v==="home")h=vHome();
@@ -219,7 +225,7 @@ function render(){
  var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
  $("#nav").innerHTML=tabs.map(function(t){var on=(v===t[0])||(t[0]==="home"&&(v==="menu"))||(t[0]==="cart"&&v==="checkout")||(t[0]==="pedidos"&&v==="done");return '<button class="'+(on?"on":"")+'" onclick="ir(\''+t[0]+'\')">'+t[1]+'</button>'}).join("");
 }
-/* ===== Cardápio real (n8n -> Postgres). Se falhar, fica o de exemplo acima ===== */
+/* ===== Cardápio real (n8n -> Postgres). Se falhar, mostra a tela "chame o restaurante no WhatsApp" ===== */
 function aplicaApi(d){
  var G=[];
  if(d.ofertas&&d.ofertas.length)G.push({id:"ofertas",nome:"Ofertas",itens:d.ofertas.map(function(o,k){return{id:"o"+k,nome:o.nome,preco:Number(o.preco),desc:o.itens}})});
@@ -237,9 +243,10 @@ function aplicaApi(d){
  var padrao=Number(d.taxa_padrao);if(isNaN(padrao))padrao=2;
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
  if(d.horario&&d.agora&&location.search.indexOf("fechado")<0){ABERTO=d.agora>=d.horario.horario_abre&&d.agora<d.horario.horario_fecha}
- S.grupo=G[0].id;REAL=true;
+ S.grupo=G[0].id;REAL=true;STATUS="ok";
 }
-try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);render()}).catch(function(e){console.log("API falhou, usando exemplo",e)})}catch(e){}
+if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);render()}).catch(function(e){console.log("API falhou",e);STATUS="falha";render()})}catch(e){STATUS="falha"}
+if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";render()}},12000);
 
 render();
 </script>
