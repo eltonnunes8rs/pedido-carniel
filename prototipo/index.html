@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 18:05 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 18:15 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -171,7 +171,7 @@ function finalizar(){
  if(S.modo==="Entrega"&&(!S.end.rua.trim()||!S.end.num.trim())){alert("Preencha rua e número.");return}
  var t=totais(S.cart,taxaAtual());
  var num=100+S.pedidos.length+1;
- var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido"};
+ var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
  if(p.end){var ja=S.enderecos.some(function(e){return e.rua===p.end.rua&&e.num===p.end.num&&e.bairro===p.end.bairro});if(!ja)S.enderecos.push(JSON.parse(JSON.stringify(p.end)))}
  S.pedidos.unshift(p);S.ultimo=p;S.cart=[];salvar();ir("done");
 }
@@ -189,11 +189,12 @@ function vDone(){
  var p=S.ultimo;
  return '<header>Pedido enviado ✅</header><div class="pad"><h2>Pedido #'+p.id+' recebido</h2><p>Já está no sistema e na impressora da cozinha. Você vai receber uma cópia no WhatsApp:</p><pre>'+esc(copiaTexto(p))+'</pre><button class="btn" onclick="ir(\'pedidos\')">Ver meus pedidos</button></div>';
 }
+function quandoTxt(q){if(!q)return"";var d=new Date(q);if(isNaN(d))return"";function z(n){return(n<10?"0":"")+n}return z(d.getDate())+"/"+z(d.getMonth()+1)+"/"+d.getFullYear()+" às "+z(d.getHours())+":"+z(d.getMinutes())}
 function vPedidos(){
  var h='<header>Meus pedidos</header><div class="pad">';
  if(!S.pedidos.length)h+='<p>Você ainda não fez pedidos hoje.</p>';
  S.pedidos.forEach(function(p,k){
-  h+='<div class="box"><b>Pedido #'+p.id+'</b> <span class="chip'+(p.status==="Entregue"?" ok":"")+'">'+p.status+'</span><div class="peq">'+p.modo+' • '+p.pag+'</div>';
+  h+='<div class="box"><b>Pedido #'+p.id+'</b> <span class="chip'+(p.status==="Entregue"?" ok":"")+'">'+p.status+'</span><div class="peq">'+quandoTxt(p.quando)+'</div><div class="peq">'+p.modo+' • '+p.pag+'</div>';
   p.itens.forEach(function(i){h+='<div class="linha"><span>'+i.qtd+'x '+esc(i.nome)+'</span><span>'+(i.preco==null?'a pesar':brl(i.preco*i.qtd))+'</span></div>'});
   h+='<div class="linha tot"><span>Total</span><span>'+brl(p.total)+(p.pend?' + pesagem':'')+'</span></div>'+
   '<div class="peq">Só no protótipo: <button class="rm" onclick="avancar('+k+')">avançar status</button>'+(p.pend?' • <button class="rm" onclick="pesar('+k+')">equipe pesou (R$ 30)</button>':'')+'</div></div>';
