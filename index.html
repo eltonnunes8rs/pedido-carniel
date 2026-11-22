@@ -1,21 +1,368 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 13:55 - página de teste da hospedagem (Pedido Carniel) -->
+<!-- Versão 22/11/2026 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pedido Carniel</title>
-  <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #fff; color: #222;
-           display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-    h1 { color: #b30000; margin: 0 0 8px; }
-    p { margin: 0; color: #555; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedido Carniel</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;color:#222}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;padding-bottom:130px}
+  header{background:#6b2832;color:#fff;padding:14px 16px;font-size:18px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+  header small{font-weight:normal;font-size:12px;opacity:.9}
+  .aviso{background:#fff3cd;color:#664d03;padding:8px 14px;font-size:12px}
+  .pad{padding:16px}
+  h2{margin:0 0 10px;font-size:18px}
+  .btn{display:block;width:100%;padding:15px;border:0;border-radius:10px;background:#6b2832;color:#fff;font-size:17px;margin:10px 0;cursor:pointer}
+  .btn.sec{background:#fff;color:#6b2832;border:2px solid #6b2832}
+  .btn:disabled{background:#bbb}
+  .tabs{display:flex;overflow-x:auto;border-bottom:1px solid #ddd;background:#fff;position:sticky;top:0}
+  .tabs button{flex:0 0 auto;padding:13px 16px;border:0;background:none;font-size:15px;color:#666;border-bottom:3px solid transparent}
+  .tabs button.on{color:#6b2832;border-color:#6b2832;font-weight:bold}
+  .item{display:flex;justify-content:space-between;gap:10px;padding:15px 16px;border-bottom:1px solid #eee;cursor:pointer}
+  .item .p{color:#0a7a3d;font-weight:bold;white-space:nowrap}
+  .item .p.ac{color:#b36b00;font-size:13px;white-space:normal;text-align:right}
+  nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#6b2832;display:flex}
+  nav button{flex:1;padding:12px 4px;border:0;background:none;color:#fff;font-size:13px;opacity:.8}
+  nav button.on{opacity:1;font-weight:bold;background:rgba(255,255,255,.15)}
+  .sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+  .sheet{background:#fff;width:100%;max-width:480px;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px}
+  .qty{display:flex;align-items:center;gap:18px;margin:10px 0}
+  .qty button{width:44px;height:44px;border-radius:50%;border:2px solid #6b2832;background:#fff;color:#6b2832;font-size:24px}
+  .qty span{font-size:20px;min-width:24px;text-align:center}
+  textarea,input,select{width:100%;padding:12px;border:1px solid #bbb;border-radius:8px;font-size:15px;margin:6px 0;font-family:inherit}
+  label.ck{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #f0f0f0;font-size:16px}
+  label.ck input{width:22px;height:22px;margin:0}
+  .linha{display:flex;justify-content:space-between;padding:6px 0}
+  .tot{font-weight:bold;font-size:18px;border-top:2px solid #222;margin-top:8px;padding-top:10px}
+  .chip{display:inline-block;padding:5px 11px;border-radius:14px;background:#e8f1ff;color:#0b4ea2;font-size:13px;margin:2px 4px 2px 0}
+  .chip.ok{background:#dff5e6;color:#0a7a3d}
+  .box{border:1px solid #ddd;border-radius:10px;padding:12px;margin:10px 0}
+  pre{white-space:pre-wrap;background:#f1f8f1;border:1px solid #bfe0bf;border-radius:8px;padding:12px;font-size:14px;margin:8px 0}
+  .peq{font-size:12px;color:#777}
+  .rm{color:#6b2832;background:none;border:0;font-size:13px;padding:0}
+  .logo{width:38px;height:38px;border-radius:50%;margin-right:10px;vertical-align:middle;background:#fff}
+  .barra{position:fixed;left:0;right:0;bottom:44px;max-width:480px;margin:0 auto;background:#f0a030;color:#3a1218;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:16px;cursor:pointer;z-index:4;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
+  .barra b{font-size:18px}
+  .barra small{display:block;font-size:11px;opacity:.9}
+</style>
 </head>
 <body>
-  <div>
-    <h1>Olá, Carniel</h1>
-    <p>Hospedagem funcionando ✅</p>
-  </div>
+<div id="app"></div>
+<nav id="nav"></nav>
+<script>
+/* ===== DADOS DE EXEMPLO (no app de verdade virão do banco) ===== */
+var BAIRROS=[{n:"Na cidade",t:2},{n:"Fazenda Caldato",t:4},{n:"Luke",t:4},{n:"Cerro Azul",t:15}];  // locais reais (carniel_taxas_locais); cidade = taxa padrão
+var GRUPOS=[{"id": "ofertas", "nome": "Ofertas", "itens": [{"id": 1, "nome": "Boa do Dia", "preco": 24, "desc": "Arroz, Mandioca, Carne de porco frita, Banana frita, Salada"}, {"id": 2, "nome": "Econômica", "preco": 22, "desc": "Arroz, Feijão, Ovo frito, Batata, Bife de gado ou filé de frango"}, {"id": 3, "nome": "Fit do Dia", "preco": 24, "desc": "Arroz integral, Feijão, Couve refogada, Ovo cozido, Filé de frango na chapa, Salada, Frutas"}, {"id": 4, "nome": "Meteoro da Paixão", "preco": 20, "desc": "Arroz, Frango desfiado com creme de milho, Batata palha"}]}, {"id": "marmitas", "nome": "Marmitas", "itens": [{"id": 10, "nome": "Marmita P", "preco": 25, "desc": "A cozinha monta com o buffet do dia"}, {"id": 11, "nome": "Marmita M", "preco": 27}, {"id": 12, "nome": "Marmita G", "preco": 30}, {"id": 13, "nome": "Marmita P — feijão separado", "preco": 30}, {"id": 14, "nome": "Marmita M — feijão separado", "preco": 32}, {"id": 15, "nome": "Marmita G — feijão separado", "preco": 35}, {"id": 16, "nome": "Marmita M dupla", "preco": 42}, {"id": 17, "nome": "Marmita G dupla", "preco": 45}]}, {"id": "pers", "nome": "Personalizada", "tipo": "pers", "itens": [{"id": "PERS", "nome": "Personalizada", "preco": null}]}, {"id": "pizza", "nome": "Pizzas", "escolha": ["Crua", "Assada"], "itens": [{"id": 20, "nome": "Pizza de Mussarela", "preco": 40}, {"id": 21, "nome": "Pizza de Calabresa", "preco": 40}, {"id": 22, "nome": "Pizza de Frango", "preco": 40}]}, {"id": "saladas", "nome": "Saladas", "itens": [{"id": 30, "nome": "Maionese de batata", "preco": 20}, {"id": 30, "nome": "Maionese de maçã", "preco": 20}, {"id": 30, "nome": "Saladas diversas", "preco": 20}, {"id": 30, "nome": "Queijos variados", "preco": 20}]}, {"id": "tapiocas", "nome": "Tapiocas", "itens": [{"id": 40, "nome": "Frango com queijo e orégano", "preco": 21}, {"id": 41, "nome": "Presunto, queijo, tomate e orégano", "preco": 21}, {"id": 42, "nome": "Queijo, brócolis, bacon e orégano", "preco": 21}, {"id": 43, "nome": "Tapioca de três queijos", "preco": 21}, {"id": 44, "nome": "Queijo, calabresa, tomate e orégano", "preco": 21}, {"id": 45, "nome": "Frango com catupiry e orégano", "preco": 21}, {"id": 46, "nome": "Goiabada com queijo", "preco": 21}, {"id": 47, "nome": "Nutella com banana ou doce de leite", "preco": 21}, {"id": 48, "nome": "Nutella com morango", "preco": 21}, {"id": 49, "nome": "KitKat e queijo", "preco": 21}, {"id": 50, "nome": "Galak e queijo", "preco": 21}, {"id": 51, "nome": "Prestígio", "preco": 21}, {"id": 52, "nome": "Ovomaltine", "preco": 21}, {"id": 53, "nome": "Leite Ninho com morango ou banana", "preco": 21}]}, {"id": "bebidas", "nome": "Bebidas", "itens": [{"id": 119, "nome": "Água com gás", "preco": 4}, {"id": 120, "nome": "Água sem gás", "preco": 4}, {"id": 125, "nome": "Refrigerante lata", "preco": 8}, {"id": 126, "nome": "Refrigerante lata zero", "preco": 8}, {"id": 127, "nome": "Refrigerante 600 ml", "preco": 10}, {"id": 128, "nome": "Refrigerante zero 600 ml", "preco": 10}, {"id": 129, "nome": "Refrigerante 2 litros", "preco": 16}, {"id": 130, "nome": "Refrigerante zero 2 litros", "preco": 16}, {"id": 121, "nome": "Suco Prats 300 ml", "preco": 7}, {"id": 122, "nome": "Suco Prats 900 ml", "preco": 15}, {"id": 123, "nome": "Suco Prats 1,5 litros", "preco": 20}, {"id": 124, "nome": "Red Bull 250 ml", "preco": 12}]}];  // ofertas e bebidas de 22/11 (cardápio real do banco)
+/* Itens do buffet: lista real do cardápio de 17/11 (Cardápio Completo + Carnes), só para ver como fica */
+var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
+/* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
+var ABERTO=location.search.indexOf("fechado")<0;
+var REAL=false;
+var STATUS=location.search.indexOf("falha")>=0?"falha":(location.search.indexOf("exemplo")>=0?"ok":"carregando");  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo; ?falha=1 mostra a tela de falha)
+var ZAP="554991680422";  // WhatsApp do restaurante (confirmar)  // true quando o cardápio veio do banco (n8n)
+var BASE="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/";
+var API=BASE+"cardapio";
+var BUFFET_ID={};
+
+/* ===== ESTADO ===== */
+var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
+try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
+try{S.token=localStorage.getItem("pc_token")||"";S.nome=localStorage.getItem("pc_nome")||"";S.telDig=localStorage.getItem("pc_tel")||""}catch(e){S.token="";S.nome="";S.telDig=""}
+S.loginPasso="tel";S.msg="";S.zapBtn=false;S.volta="checkout";S.meus=null;S.meusCarregando=false;S.enviando=false;S.chave=null;S.nomeDig="";S.codigoDig="";
+function post(p,b){return fetch(BASE+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(function(r){return r.json()})}
+function devId(){try{var d=localStorage.getItem("pc_dev");if(!d){d=Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem("pc_dev",d)}return d}catch(e){return"sem-storage"}}
+/* métricas: nunca atrapalha o app; não registra em modo de teste (?exemplo, ?falha, ?fechado) */
+function track(ev,dados){try{if(/[?&](exemplo|falha|fechado)/.test(location.search))return;if(!REAL&&ev!=="falha_cardapio")return;fetch(BASE+"evento",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({token:S.token||"",dev:devId(),evento:ev,dados:dados||{}})}).catch(function(){})}catch(e){}}
+function hojeTxt(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+try{var C=JSON.parse(localStorage.getItem("pc_cart")||"null");if(C&&C.dia===hojeTxt()){S.cart=C.cart||[];S.modo=C.modo||null;S.end=C.end||S.end;S.pag=C.pag||S.pag;S.troco=C.troco||""}}catch(e){}
+function salvar(){try{localStorage.setItem("pc_pedidos",JSON.stringify(S.pedidos));localStorage.setItem("pc_end",JSON.stringify(S.enderecos));localStorage.setItem("pc_cart",JSON.stringify({dia:hojeTxt(),cart:S.cart,modo:S.modo,end:S.end,pag:S.pag,troco:S.troco}));}catch(e){}}
+
+/* ===== UTIL ===== */
+function $(s){return document.querySelector(s)}
+function brl(v){return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function grupoDe(gid){return GRUPOS.filter(function(g){return g.id===gid})[0]}
+function totais(linhas,taxa){var sub=0,pend=false;linhas.forEach(function(l){if(l.preco==null){pend=true}else{sub+=l.preco*l.qtd}});return {sub:sub,taxa:taxa||0,total:sub+(taxa||0),pend:pend}}
+function taxaAtual(){if(S.modo!=="Entrega")return 0;var b=BAIRROS.filter(function(x){return x.n===S.end.bairro})[0];return b?b.t:0}
+function ir(v){
+ if(v==="checkout"&&S.view!=="checkout")track("fechar",{itens:S.cart.length});
+ S.view=v;
+ if(v==="pedidos")carregaMeus();
+ if(v==="checkout")carregaEnderecos();
+ render();window.scrollTo(0,0)}
+
+/* ===== TELAS ===== */
+function vHome(){
+ var h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
+ if(ABERTO){
+  h+='<h2>Como quer receber?</h2><button class="btn" onclick="escolherModo(\'Entrega\')">🛵 Entrega</button><button class="btn" onclick="escolherModo(\'Retirada\')">🏪 Retirada</button>';
+ }else{
+  h+='<h2>Pedidos encerrados por hoje</h2><p>Atendemos pelo app das 09:30 às 13:30. Você pode ver seus pedidos de hoje.</p><button class="btn sec" onclick="ir(\'pedidos\')">Ver meus pedidos</button>';
+ }
+ return h+'</div>';
+}
+function escolherModo(m){S.modo=m;track("modo",{modo:m});ir("menu")}
+function vMenu(){
+ var h='<header>Cardápio de hoje<small>'+(S.modo||'')+'</small></header><div class="tabs">';
+ GRUPOS.forEach(function(g){h+='<button class="'+(g.id===S.grupo?"on":"")+'" onclick="S.grupo=\''+g.id+'\';render()">'+esc(g.nome)+'</button>'});
+ h+='</div>';
+ if(grupoDe(S.grupo).tipo==="pers")h+='<div class="aviso" style="background:#e8f1ff;color:#0b4ea2">Monte a sua marmita marcando os itens. O valor é definido na pesagem. Quer outra diferente? Monte de novo e insira outra Personalizada.</div>';
+ if(grupoDe(S.grupo).aviso)h+='<div class="aviso" style="background:#e8f1ff;color:#0b4ea2">'+esc(grupoDe(S.grupo).aviso)+'</div>';
+ grupoDe(S.grupo).itens.forEach(function(i){
+  h+='<div class="item" onclick="abrirItem(\''+S.grupo+'\',\''+i.id+'\')"><span>'+esc(i.nome)+(i.desc?'<small style="display:block;font-size:12px;color:#777;font-weight:400">'+(S.grupo==="ofertas"?"Hoje: ":"")+esc(i.desc)+'</small>':'')+'</span>'+(i.preco==null?'<span class="p ac">preço na pesagem</span>':'<span class="p">'+brl(i.preco)+'</span>')+'</div>';
+ });
+ return h;
+}
+function abrirItem(gid,iid){
+ var g=grupoDe(gid),it=g.itens.filter(function(x){return String(x.id)===String(iid)})[0];
+ S.sheet={gid:gid,item:it,pers:g.tipo==="pers",qtd:1,obs:"",marcados:[],esc:null,opcoes:g.escolha||null};render();
+}
+function vSheet(){
+ var s=S.sheet,h='<div class="sheetbg"><div class="sheet"><h2>'+esc(s.item.nome)+'</h2>';
+ if(s.pers){
+  h+='<div class="peq">Itens do buffet de hoje — marque o que quiser:</div>';
+  BUFFET_HOJE.forEach(function(n,k){h+='<label class="ck"><input type="checkbox" '+(s.marcados.indexOf(n)>=0?"checked":"")+' onchange="marcar(\''+n.replace(/'/g,"\\'")+'\')"> '+esc(n)+'</label>'});
+ }
+ if(s.opcoes){h+='<div class="peq">Escolha:</div>';s.opcoes.forEach(function(o){h+='<label class="ck"><input type="radio" name="esc" '+(s.esc===o?'checked':'')+' onchange="S.sheet.esc=\''+o+'\'"> '+o+'</label>'})}
+ if(!s.pers)h+='<div class="qty"><button onclick="mudaQtd(-1)">−</button><span>'+s.qtd+'</span><button onclick="mudaQtd(1)">+</button></div>';
+ h+='<textarea id="obs" rows="2" placeholder="Observação (opcional)" oninput="S.sheet.obs=this.value;salvar()">'+esc(s.obs)+'</textarea>';
+ var sub=s.item.preco==null?"valor na pesagem":brl(s.item.preco*s.qtd);
+ h+='<button class="btn" onclick="inserir()">Inserir no carrinho — '+sub+'</button><button class="btn sec" onclick="S.sheet=null;render()">Cancelar</button></div></div>';
+ return h;
+}
+function marcar(n){var m=S.sheet.marcados,k=m.indexOf(n);if(k>=0)m.splice(k,1);else m.push(n)}
+function mudaQtd(d){S.sheet.qtd=Math.max(1,S.sheet.qtd+d);var o=S.sheet.obs;render();}
+function inserir(){
+ var s=S.sheet;
+ if(s.opcoes&&!s.esc){alert("Escolha: "+s.opcoes.join(" ou ")+".");return}
+ if(s.pers&&s.marcados.length===0){alert("Marque pelo menos um item do buffet.");return}
+ S.cart.push({ref:s.item.ref,esc:s.esc,nome:s.item.nome+(s.esc?" ("+s.esc.toLowerCase()+")":""),preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers});
+ renum();track("item_add",{nome:s.item.nome,pers:!!s.pers});S.sheet=null;render();
+}
+/* Personalizadas: 1 só = "Personalizada"; 2 ou mais = "Personalizada 1", "Personalizada 2"... */
+function renum(){var ps=S.cart.filter(function(l){return l.pers});ps.forEach(function(l,k){l.nome=ps.length>1?"Personalizada "+(k+1):"Personalizada"})}
+function vCart(){
+ var h='<header>Carrinho<small>'+(S.modo||'')+'</small></header><div class="pad">';
+ if(!S.cart.length){return h+'<p>Seu carrinho está vazio.</p><button class="btn sec" onclick="ir(\'menu\')">Ver o cardápio</button></div>'}
+ S.cart.forEach(function(l,k){
+  h+='<div class="box"><b>'+esc(l.nome)+'</b>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')+
+  (l.pers?'<div class="linha"><button class="rm" onclick="cartQtd('+k+',-1)">Remover</button><span style="font-size:15px">valor na pesagem</span></div></div>':'<div class="qty"><button onclick="cartQtd('+k+',-1)">−</button><span>'+l.qtd+'</span><button onclick="cartQtd('+k+',1)">+</button><span style="margin-left:auto;font-size:15px">'+(l.preco==null?'valor na pesagem':brl(l.preco*l.qtd))+'</span></div></div>');
+ });
+ h+='<div class="peq">Quer adicionar alguma bebida?</div>';
+ grupoDe("bebidas").itens.forEach(function(b){h+='<span class="chip" onclick="addBebida(\''+b.id+'\')">+ '+esc(b.nome)+' '+brl(b.preco)+'</span>'});
+ var t=totais(S.cart,0);
+ h+='<div class="linha tot"><span>Subtotal</span><span>'+brl(t.sub)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem.</div>':'');
+ return h+'<button class="btn" onclick="ir(\'checkout\')">Fechar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Adicionar mais itens</button></div>';
+}
+function cartQtd(k,d){S.cart[k].qtd+=d;if(S.cart[k].qtd<1)S.cart.splice(k,1);renum();render()}
+function addBebida(id){var b=grupoDe("bebidas").itens.filter(function(x){return String(x.id)===String(id)})[0];var ex=S.cart.filter(function(l){return l.nome===b.nome&&!l.obs})[0];if(ex)ex.qtd++;else S.cart.push({ref:b.ref,nome:b.nome,preco:b.preco,qtd:1,obs:"",marcados:[]});track("item_add",{nome:b.nome});render()}
+
+function vCheckout(){
+ var h='<header>Fechar pedido<small>'+(S.modo||'')+'</small></header><div class="pad">';
+ h+='<div class="box"><b>Seu pedido</b>';
+ S.cart.forEach(function(l){h+='<div class="linha"><span>'+l.qtd+'x '+esc(l.nome)+'</span><span>'+(l.preco==null?'a pesar':brl(l.preco*l.qtd))+'</span></div>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')});
+ h+='<button class="rm" onclick="ir(\'cart\')">Alterar itens</button></div>';
+ if(S.modo==="Entrega"){
+  h+='<h2>Endereço</h2>';
+  S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+' <b onclick="event.stopPropagation();apagaEnd('+k+')" style="margin-left:6px">✕</b></span>'});
+  h+='<select onchange="S.end.bairro=this.value;render()">'+BAIRROS.map(function(b){return '<option '+(S.end.bairro===b.n?"selected":"")+'>'+esc(b.n)+'</option>'}).join("")+'</select>'+
+  '<input placeholder="Rua" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
+  '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value;salvar()">'+
+  '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
+  '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
+ }
+ if(REAL&&!S.nome)h+='<h2>Seu nome</h2><input placeholder="Como podemos te chamar?" value="'+esc(S.nomeDig)+'" oninput="S.nomeDig=this.value">';
+ h+='<h2>Pagamento (na entrega/retirada)</h2>';
+ ["Pix","Cartão","Dinheiro"].forEach(function(p){h+='<label class="ck"><input type="radio" name="pag" '+(S.pag===p?"checked":"")+' onchange="S.pag=\''+p+'\';render()"> '+p+'</label>'});
+ if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value;salvar()">';
+ var t=totais(S.cart,taxaAtual());
+ h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+brl(t.taxa)+'</span></div>':'')+
+ '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
+ return h+'<button class="btn" onclick="finalizar()">'+(S.enviando?"Enviando…":"Enviar pedido")+'</button><button class="btn sec" onclick="ir(\'menu\')">Voltar ao cardápio</button></div>';
+}
+function usaEnd(k){S.end=JSON.parse(JSON.stringify(S.enderecos[k]));render()}
+/* ===== Endereços e histórico no banco (se falhar, usa o que está no aparelho) ===== */
+function endParaBanco(e){return{apelido:String(e.apelido||(e.rua+" "+e.num)).trim().slice(0,40),bairro:e.bairro||"",endereco:JSON.stringify({rua:e.rua||"",num:e.num||"",comp:e.comp||""})}}
+function endDoBanco(x){var o={rua:"",num:"",comp:""};try{o=JSON.parse(x.endereco)}catch(e){o.rua=String(x.endereco||"")}return{apelido:x.apelido||"",bairro:x.bairro||"Na cidade",rua:o.rua||"",num:o.num||"",comp:o.comp||""}}
+function carregaEnderecos(){
+ if(!REAL||!S.token)return;
+ post("enderecos",{token:S.token,acao:"listar"}).then(function(r){if(r&&r.ok&&Array.isArray(r.lista)){S.enderecos=r.lista.map(endDoBanco);render()}}).catch(function(){})}
+function apagaEnd(k){
+ var e=S.enderecos[k];if(!e)return;S.enderecos.splice(k,1);render();
+ if(REAL&&S.token)post("enderecos",{token:S.token,acao:"apagar",apelido:endParaBanco(e).apelido}).catch(function(){})}
+function salvaEndBanco(e){
+ if(!REAL||!S.token||!e)return;var b=endParaBanco(e);
+ post("enderecos",{token:S.token,acao:"salvar",apelido:b.apelido,bairro:b.bairro,endereco:b.endereco}).catch(function(){})}
+function carregaMeus(){
+ if(!REAL||!S.token){S.meus=null;return}
+ S.meusCarregando=true;
+ post("meus-pedidos",{token:S.token}).then(function(r){S.meusCarregando=false;S.meus=(r&&r.ok&&Array.isArray(r.lista))?r.lista:null;if(S.view==="pedidos")render()}).catch(function(){S.meusCarregando=false;S.meus=null;if(S.view==="pedidos")render()})}
+function msgErro(m){m=String(m||"");
+ if(m==="fechado")return"O restaurante não está recebendo pedidos agora.";
+ if(m.indexOf("indisponivel")===0)return"Um item do seu carrinho acabou ou saiu do cardápio. Volte ao cardápio e confira.";
+ if(m==="muitos_pedidos")return"Muitos pedidos seguidos. Chame o restaurante pelo WhatsApp.";
+ if(m==="endereco_incompleto")return"Preencha rua e número.";
+ if(m==="pizza_crua_ou_assada")return"Escolha se a pizza é crua ou assada.";
+ return"Não consegui enviar o pedido. Tente de novo ou chame o restaurante pelo WhatsApp."}
+function finalizar(){
+ if(S.modo==="Entrega"&&(!S.end.rua.trim()||!S.end.num.trim())){alert("Preencha rua e número.");return}
+ if(S.enviando)return;
+ var t=totais(S.cart,taxaAtual());
+ if(!REAL){var num=100+S.pedidos.length+1;concluir(num,t);return}
+ if(!S.token){S.loginPasso="tel";S.msg="";S.volta="checkout";ir("login");return}
+ if(!S.nome&&!S.nomeDig.trim()){alert("Escreva o seu nome.");return}
+ if(S.cart.some(function(l){return !l.pers&&!l.ref})){S.cart=[];salvar();alert("O seu carrinho era de uma versão antiga. Monte o pedido de novo.");ir("menu");return}
+ if(!S.chave)S.chave=String(Date.now())+Math.random().toString(36).slice(2,8);
+ var dados={chave:S.chave,nome:S.nome||S.nomeDig.trim(),modo:S.modo,end:S.modo==="Entrega"?S.end:null,pag:S.pag,troco:S.troco,
+  itens:S.cart.map(function(l){return l.pers?{k:"pers",marcados:l.marcados.map(function(n){return BUFFET_ID[n]}),obs:l.obs}:{k:l.ref.k,nome:l.ref.nome,chave:l.ref.chave,id:l.ref.id,esc:l.esc,qtd:l.qtd,obs:l.obs}})};
+ S.enviando=true;render();
+ post("pedido",{token:S.token,dados:dados}).then(function(r){
+  S.enviando=false;
+  if(r&&r.ok){track("enviou",{numero:r.numero,modo:S.modo,pag:S.pag});if(!S.nome&&S.nomeDig){S.nome=S.nomeDig.trim();try{localStorage.setItem("pc_nome",S.nome)}catch(e){}}S.chave=null;concluir(r.numero,t);return}
+  if(r&&r.motivo==="sessao_invalida"){S.token="";try{localStorage.removeItem("pc_token")}catch(e){}S.loginPasso="tel";S.msg="Entre de novo com o seu telefone.";ir("login");return}
+  track("erro_pedido",{motivo:(r&&r.motivo)||"sem_resposta"});alert(msgErro(r&&r.motivo));render();
+ }).catch(function(){S.enviando=false;alert(msgErro());render()});
+}
+function concluir(num,t){
+ var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
+ if(p.end){var ja=S.enderecos.some(function(e){return e.rua===p.end.rua&&e.num===p.end.num&&e.bairro===p.end.bairro});if(!ja)S.enderecos.push(JSON.parse(JSON.stringify(p.end)));salvaEndBanco(p.end)}
+ S.pedidos.unshift(p);S.ultimo=p;S.cart=[];salvar();ir("done");
+}
+/* ===== Login por código no WhatsApp ===== */
+function vLogin(){
+ var h='<header><span><img class="logo" src="logo.png" alt="">Entrar</span></header><div class="pad">';
+ if(S.msg)h+='<div class="aviso">'+esc(S.msg)+'</div>';
+ if(S.loginPasso==="tel"){
+  h+='<h2>Qual é o seu WhatsApp?</h2><p class="peq">Com DDD. Vamos mandar um código por lá para confirmar que o número é seu. Você só faz isso uma vez.</p>'+
+  '<input type="tel" inputmode="tel" placeholder="(46) 99999-9999" value="'+esc(S.telDig)+'" oninput="S.telDig=this.value">'+
+  '<button class="btn" onclick="pedirCodigo()">'+(S.enviando?"Enviando…":"Receber código no WhatsApp")+'</button>';
+ }else{
+  h+='<h2>Digite o código</h2><p class="peq">Mandamos um código de 6 números para o seu WhatsApp ('+esc(S.telDig)+'). Vale 10 minutos.</p>'+
+  '<input type="tel" inputmode="numeric" maxlength="6" placeholder="000000" value="'+esc(S.codigoDig)+'" oninput="S.codigoDig=this.value">'+
+  '<button class="btn" onclick="entrar()">'+(S.enviando?"Conferindo…":"Entrar")+'</button>'+
+  '<button class="btn sec" onclick="S.loginPasso=\'tel\';S.msg=\'\';render()">Trocar o número</button>';
+ }
+ if(S.zapBtn)h+='<a class="btn" style="display:block;text-align:center;text-decoration:none" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Quero fazer um pedido.")+'" onclick="track(\'clicou_zap\',{de:\'login\'})">Chamar o restaurante no WhatsApp</a>';
+ return h+'<button class="rm" onclick="ir(S.volta||\'checkout\')">Voltar</button></div>';
+}
+function pedirCodigo(){
+ if(S.enviando)return;S.enviando=true;S.msg="";render();
+ post("codigo",{tel:S.telDig}).then(function(r){S.enviando=false;
+  if(r&&r.ok){track("pediu_codigo");S.loginPasso="codigo";S.codigoDig="";S.zapBtn=false;try{localStorage.setItem("pc_tel",S.telDig)}catch(e){}}
+  else if(r&&r.motivo==="nao_liberado"){track("nao_liberado");S.zapBtn=true;S.msg="O pedido pelo site está em teste e ainda não foi liberado para o seu número. Chame o restaurante pelo WhatsApp que a gente anota o seu pedido."}
+  else S.msg=r&&r.motivo==="telefone_invalido"?"Confira o número, com DDD.":(r&&(r.motivo==="muitos_codigos"||r.motivo==="limite_geral")?"Muitos códigos pedidos. Tente de novo mais tarde ou chame o restaurante pelo WhatsApp.":"Não consegui mandar o código. Tente de novo.");
+  render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
+}
+function entrar(){
+ if(S.enviando)return;S.enviando=true;S.msg="";render();
+ post("entrar",{tel:S.telDig,codigo:S.codigoDig}).then(function(r){S.enviando=false;
+  if(r&&r.ok){S.token=r.token;S.nome=r.nome||"";try{localStorage.setItem("pc_token",S.token);localStorage.setItem("pc_nome",S.nome)}catch(e){}S.msg="";track("logou");var vv=S.volta||"checkout";S.volta="checkout";ir(vv);return}
+  S.msg=r&&r.motivo==="codigo_errado"?"Código errado. Confira e tente de novo.":(r&&r.motivo==="codigo_expirado"?"O código venceu ou errou 3 vezes. Peça um novo.":"Não consegui entrar. Tente de novo.");
+  if(r&&r.motivo==="codigo_expirado")S.loginPasso="tel";
+  render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
+}
+function copiaTexto(p){
+ var l=["Pedido #"+p.id];
+ p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
+ l.push(p.modo==="Entrega"?"Entrega: "+p.end.rua+", "+p.end.num+(p.end.comp?" - "+p.end.comp:"")+" - "+p.end.bairro:"Retirada no restaurante");
+ l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
+ if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+brl(p.taxa))}
+ l.push("Total: "+brl(p.total)+(p.pend?" + Personalizada(s) a pesar":""));
+ l.push("");l.push("🔒 Este pedido já está salvo no sistema. Editar esta mensagem não altera nada. Para mudar, fale com a gente.");
+ return l.join("\n");
+}
+function vDone(){
+ var p=S.ultimo;
+ return '<header>Pedido enviado ✅</header><div class="pad"><h2>Pedido #'+p.id+' recebido</h2><p>Já está no sistema e na impressora da cozinha. Você vai receber uma cópia no WhatsApp:</p><pre>'+esc(copiaTexto(p))+'</pre><button class="btn" onclick="ir(\'pedidos\')">Ver meus pedidos</button></div>';
+}
+function quandoTxt(q){if(!q)return"";var d=new Date(q);if(isNaN(d))return"";function z(n){return(n<10?"0":"")+n}return z(d.getDate())+"/"+z(d.getMonth()+1)+"/"+d.getFullYear()+" às "+z(d.getHours())+":"+z(d.getMinutes())}
+var ST_TXT={RECEBIDO:"Recebido",EM_PREPARO:"Em preparo",ENTREGUE:"Entregue",CANCELADO:"Cancelado"};
+function mesmoDia(q){var d=new Date(q),n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()}
+function vPedidosBanco(){
+ var h='<header>Meus pedidos</header><div class="pad">';
+ if(!S.meus.length)h+='<p>Você ainda não fez pedidos por aqui.</p>';
+ S.meus.forEach(function(p){
+  var st=p.status;if(st==="EM_PREPARO"&&!mesmoDia(p.quando))st="CONCLUIDO";
+  var txt=st==="CONCLUIDO"?"Concluído":(ST_TXT[st]||st);
+  h+='<div class="box"><b>Pedido'+(p.numero?' #'+p.numero:'')+'</b> <span class="chip'+(st==="ENTREGUE"||st==="CONCLUIDO"?" ok":"")+'">'+esc(txt)+'</span><div class="peq">'+quandoTxt(p.quando)+'</div><div class="peq">'+esc(p.modo==="ENTREGA"?"Entrega":"Retirada")+(p.pagamento?' • '+esc(p.pagamento):'')+'</div>';
+  var pers={},ordem=[],kg=false;
+  (p.itens||[]).forEach(function(i){
+   if(i.tipo_venda==="KG"){kg=true;var g=i.grupo||"Personalizada";if(!pers[g]){pers[g]=[];ordem.push(g)}pers[g].push(i.produto)}
+   else h+='<div class="linha"><span>'+(i.quantidade||1)+'x '+esc(i.produto||"")+'</span><span>'+(i.preco_unit!=null?brl(Number(i.preco_unit)*(i.quantidade||1)):"")+'</span></div>'+(i.observacao?'<div class="peq">Obs: '+esc(i.observacao)+'</div>':'')});
+  ordem.forEach(function(g){h+='<div class="linha"><span>'+esc(g==="Cardápio Completo"?"Personalizada":g)+'</span><span>'+(p.pesado?"":"a pesar")+'</span></div><div class="peq">'+esc(pers[g].join(", "))+'</div>'});
+  if(p.modo==="ENTREGA"&&Number(p.taxa)>0)h+='<div class="linha"><span>Taxa de entrega</span><span>'+brl(Number(p.taxa))+'</span></div>';
+  h+='<div class="linha tot"><span>Total</span><span>'+brl(Number(p.total||0))+((kg&&!p.pesado)?' + pesagem':'')+'</span></div></div>';
+ });
+ return h+'</div>';
+}
+function vPedidos(){
+ if(REAL&&S.token&&S.meus)return vPedidosBanco();
+ var h='<header>Meus pedidos</header><div class="pad">';
+ if(REAL&&S.token&&S.meusCarregando)h+='<p class="peq">Buscando os seus pedidos…</p>';
+ if(REAL&&!S.token)h+='<div class="box"><b>Quer ver todos os seus pedidos?</b><div class="peq">Entre com o seu WhatsApp e o histórico aparece aqui, em qualquer aparelho.</div><button class="btn sec" onclick="S.loginPasso=\'tel\';S.msg=\'\';S.volta=\'pedidos\';ir(\'login\')">Entrar</button></div>';
+ if(!S.pedidos.length)h+='<p>Você ainda não fez pedidos hoje.</p>';
+ S.pedidos.forEach(function(p,k){
+  h+='<div class="box"><b>Pedido #'+p.id+'</b> <span class="chip'+(p.status==="Entregue"?" ok":"")+'">'+p.status+'</span><div class="peq">'+quandoTxt(p.quando)+'</div><div class="peq">'+p.modo+' • '+p.pag+'</div>';
+  p.itens.forEach(function(i){h+='<div class="linha"><span>'+i.qtd+'x '+esc(i.nome)+'</span><span>'+(i.preco==null?'a pesar':brl(i.preco*i.qtd))+'</span></div>'});
+  h+='<div class="linha tot"><span>Total</span><span>'+brl(p.total)+(p.pend?' + pesagem':'')+'</span></div>'+
+  (REAL?'':'<div class="peq">Só no exemplo: <button class="rm" onclick="avancar('+k+')">avançar status</button>'+(p.pend?' • <button class="rm" onclick="pesar('+k+')">equipe pesou (R$ 30)</button>':'')+'</div>')+'</div>';
+ });
+ return h+'</div>';
+}
+function avancar(k){var o=["Recebido","Em preparo","Entregue"],p=S.pedidos[k];p.status=o[Math.min(2,o.indexOf(p.status)+1)];salvar();render()}
+function pesar(k){var p=S.pedidos[k];p.itens.forEach(function(i){if(i.preco==null)i.preco=30});var t=totais(p.itens,p.taxa);p.sub=t.sub;p.total=t.total;p.pend=false;salvar();render()}
+
+/* ===== MONTAGEM ===== */
+function render(){
+ salvar();
+ if(STATUS!=="ok"){
+  var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" onclick="track(\'clicou_zap\',{de:\'falha\'})" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.href=location.pathname">Tentar de novo</button>';
+  $("#app").innerHTML='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span></header><div class="pad">'+m+'</div>';$("#nav").innerHTML="";return;
+ }
+ var v=S.view,h="";
+ if(!ABERTO&&(v==="menu"||v==="cart"||v==="checkout"))v="home";
+ if(v==="home")h=vHome();
+ else if(v==="menu")h=vMenu();
+ else if(v==="cart")h=vCart();
+ else if(v==="checkout")h=S.cart.length?vCheckout():vCart();
+ else if(v==="done")h=vDone();
+ else if(v==="pedidos")h=vPedidos();
+ else if(v==="login")h=vLogin();
+ if(!REAL){h='<div class="aviso">EXEMPLO — dados de mentira, nada aqui vai para o restaurante.</div>'+h}
+ var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
+ if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
+ if(S.sheet)h+=vSheet();
+ $("#app").innerHTML=h;
+ var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
+ $("#nav").innerHTML=tabs.map(function(t){var on=(v===t[0])||(t[0]==="home"&&(v==="menu"))||(t[0]==="cart"&&v==="checkout")||(t[0]==="pedidos"&&v==="done");return '<button class="'+(on?"on":"")+'" onclick="ir(\''+t[0]+'\')">'+t[1]+'</button>'}).join("");
+}
+/* ===== Cardápio real (n8n -> Postgres). Se falhar, mostra a tela "chame o restaurante no WhatsApp" ===== */
+function aplicaApi(d){
+ var G=[];
+ if(d.ofertas&&d.ofertas.length)G.push({id:"ofertas",nome:"Ofertas",itens:d.ofertas.map(function(o,k){return{id:"o"+k,nome:o.nome,preco:Number(o.preco),desc:o.itens,ref:{k:"oferta",nome:o.nome}}})});
+ if(d.tamanhos&&d.tamanhos.length)G.push({id:"marmitas",nome:"Marmitas",itens:d.tamanhos.map(function(t,k){return{id:"t"+k,nome:t.nome.replace(" c/ feijão separado"," — feijão separado"),preco:Number(t.preco),ref:{k:"tam",chave:t.chave}}})});
+ G.push({id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"PERS",nome:"Personalizada",preco:null}]});
+ (d.por_unidade||[]).forEach(function(g){
+  var pz=g.tipo==="PIZZA_CRUA_OU_ASSADA",id=pz?"pizza":(g.tipo==="SALADAS"?"saladas":"tapiocas");
+  var o={id:id,nome:pz?"Pizzas":(g.tipo==="SALADAS"?"Saladas":"Tapiocas"),itens:(g.itens||[]).map(function(i){return{id:"u"+i.id,nome:(pz?"Pizza de ":"")+i.nome,preco:Number(g.preco),ref:{k:"prod",id:i.id}}})};
+  if(pz)o.escolha=["Crua","Assada"];
+  G.push(o)});
+ if(d.bebidas&&d.bebidas.length)G.push({id:"bebidas",nome:"Bebidas",itens:d.bebidas.map(function(b){return{id:"b"+b.id,nome:b.nome,preco:Number(b.preco),ref:{k:"prod",id:b.id}}})});
+ if(G.length<3)throw new Error("cardapio vazio");
+ GRUPOS=G;
+ if(d.buffet&&d.buffet.length)BUFFET_HOJE=d.buffet;
+ (d.buffet_ids||[]).forEach(function(b){BUFFET_ID[b.nome]=b.id});
+ var padrao=Number(d.taxa_padrao);if(isNaN(padrao))padrao=2;
+ BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
+ if(d.horario&&d.agora&&location.search.indexOf("fechado")<0){ABERTO=d.agora>=d.horario.horario_abre&&d.agora<d.horario.horario_fecha}
+ S.grupo=G[0].id;REAL=true;STATUS="ok";
+}
+if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
+if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";track("falha_cardapio",{motivo:"demora"});render()}},12000);
+
+render();
+</script>
 </body>
 </html>
