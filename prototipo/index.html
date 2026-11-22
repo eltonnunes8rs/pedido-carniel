@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 18:25 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 18:55 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -62,11 +62,16 @@ var ABERTO=location.search.indexOf("fechado")<0;
 var REAL=false;
 var STATUS=location.search.indexOf("falha")>=0?"falha":(location.search.indexOf("exemplo")>=0?"ok":"carregando");  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo; ?falha=1 mostra a tela de falha)
 var ZAP="554991680422";  // WhatsApp do restaurante (confirmar)  // true quando o cardápio veio do banco (n8n)
-var API="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/cardapio";
+var BASE="https://boldsquid-n8n.cloudfy.live/webhook/app-carniel/";
+var API=BASE+"cardapio";
+var BUFFET_ID={};
 
 /* ===== ESTADO ===== */
 var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
 try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
+try{S.token=localStorage.getItem("pc_token")||"";S.nome=localStorage.getItem("pc_nome")||"";S.telDig=localStorage.getItem("pc_tel")||""}catch(e){S.token="";S.nome="";S.telDig=""}
+S.loginPasso="tel";S.msg="";S.enviando=false;S.chave=null;S.nomeDig="";S.codigoDig="";
+function post(p,b){return fetch(BASE+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(function(r){return r.json()})}
 function hojeTxt(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
 try{var C=JSON.parse(localStorage.getItem("pc_cart")||"null");if(C&&C.dia===hojeTxt()){S.cart=C.cart||[];S.modo=C.modo||null;S.end=C.end||S.end;S.pag=C.pag||S.pag;S.troco=C.troco||""}}catch(e){}
 function salvar(){try{localStorage.setItem("pc_pedidos",JSON.stringify(S.pedidos));localStorage.setItem("pc_end",JSON.stringify(S.enderecos));localStorage.setItem("pc_cart",JSON.stringify({dia:hojeTxt(),cart:S.cart,modo:S.modo,end:S.end,pag:S.pag,troco:S.troco}));}catch(e){}}
@@ -125,7 +130,7 @@ function inserir(){
  var s=S.sheet;
  if(s.opcoes&&!s.esc){alert("Escolha: "+s.opcoes.join(" ou ")+".");return}
  if(s.pers&&s.marcados.length===0){alert("Marque pelo menos um item do buffet.");return}
- S.cart.push({nome:s.item.nome+(s.esc?" ("+s.esc.toLowerCase()+")":""),preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers});
+ S.cart.push({ref:s.item.ref,esc:s.esc,nome:s.item.nome+(s.esc?" ("+s.esc.toLowerCase()+")":""),preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers});
  renum();S.sheet=null;render();
 }
 /* Personalizadas: 1 só = "Personalizada"; 2 ou mais = "Personalizada 1", "Personalizada 2"... */
@@ -160,22 +165,77 @@ function vCheckout(){
   '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
   '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
  }
+ if(REAL&&!S.nome)h+='<h2>Seu nome</h2><input placeholder="Como podemos te chamar?" value="'+esc(S.nomeDig)+'" oninput="S.nomeDig=this.value">';
  h+='<h2>Pagamento (na entrega/retirada)</h2>';
  ["Pix","Cartão","Dinheiro"].forEach(function(p){h+='<label class="ck"><input type="radio" name="pag" '+(S.pag===p?"checked":"")+' onchange="S.pag=\''+p+'\';render()"> '+p+'</label>'});
  if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value;salvar()">';
  var t=totais(S.cart,taxaAtual());
  h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+brl(t.taxa)+'</span></div>':'')+
  '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
- return h+'<button class="btn" onclick="finalizar()">Enviar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Voltar ao cardápio</button></div>';
+ return h+'<button class="btn" onclick="finalizar()">'+(S.enviando?"Enviando…":"Enviar pedido")+'</button><button class="btn sec" onclick="ir(\'menu\')">Voltar ao cardápio</button></div>';
 }
 function usaEnd(k){S.end=JSON.parse(JSON.stringify(S.enderecos[k]));render()}
+function msgErro(m){m=String(m||"");
+ if(m==="fechado")return"O restaurante não está recebendo pedidos agora.";
+ if(m.indexOf("indisponivel")===0)return"Um item do seu carrinho acabou ou saiu do cardápio. Volte ao cardápio e confira.";
+ if(m==="muitos_pedidos")return"Muitos pedidos seguidos. Chame o restaurante pelo WhatsApp.";
+ if(m==="endereco_incompleto")return"Preencha rua e número.";
+ if(m==="pizza_crua_ou_assada")return"Escolha se a pizza é crua ou assada.";
+ return"Não consegui enviar o pedido. Tente de novo ou chame o restaurante pelo WhatsApp."}
 function finalizar(){
  if(S.modo==="Entrega"&&(!S.end.rua.trim()||!S.end.num.trim())){alert("Preencha rua e número.");return}
+ if(S.enviando)return;
  var t=totais(S.cart,taxaAtual());
- var num=100+S.pedidos.length+1;
+ if(!REAL){var num=100+S.pedidos.length+1;concluir(num,t);return}
+ if(!S.token){S.loginPasso="tel";S.msg="";ir("login");return}
+ if(!S.nome&&!S.nomeDig.trim()){alert("Escreva o seu nome.");return}
+ if(S.cart.some(function(l){return !l.pers&&!l.ref})){S.cart=[];salvar();alert("O seu carrinho era de uma versão antiga. Monte o pedido de novo.");ir("menu");return}
+ if(!S.chave)S.chave=String(Date.now())+Math.random().toString(36).slice(2,8);
+ var dados={chave:S.chave,nome:S.nome||S.nomeDig.trim(),modo:S.modo,end:S.modo==="Entrega"?S.end:null,pag:S.pag,troco:S.troco,
+  itens:S.cart.map(function(l){return l.pers?{k:"pers",marcados:l.marcados.map(function(n){return BUFFET_ID[n]}),obs:l.obs}:{k:l.ref.k,nome:l.ref.nome,chave:l.ref.chave,id:l.ref.id,esc:l.esc,qtd:l.qtd,obs:l.obs}})};
+ S.enviando=true;render();
+ post("pedido",{token:S.token,dados:dados}).then(function(r){
+  S.enviando=false;
+  if(r&&r.ok){if(!S.nome&&S.nomeDig){S.nome=S.nomeDig.trim();try{localStorage.setItem("pc_nome",S.nome)}catch(e){}}S.chave=null;concluir(r.numero,t);return}
+  if(r&&r.motivo==="sessao_invalida"){S.token="";try{localStorage.removeItem("pc_token")}catch(e){}S.loginPasso="tel";S.msg="Entre de novo com o seu telefone.";ir("login");return}
+  alert(msgErro(r&&r.motivo));render();
+ }).catch(function(){S.enviando=false;alert(msgErro());render()});
+}
+function concluir(num,t){
  var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
  if(p.end){var ja=S.enderecos.some(function(e){return e.rua===p.end.rua&&e.num===p.end.num&&e.bairro===p.end.bairro});if(!ja)S.enderecos.push(JSON.parse(JSON.stringify(p.end)))}
  S.pedidos.unshift(p);S.ultimo=p;S.cart=[];salvar();ir("done");
+}
+/* ===== Login por código no WhatsApp ===== */
+function vLogin(){
+ var h='<header><span><img class="logo" src="logo.png" alt="">Entrar</span></header><div class="pad">';
+ if(S.msg)h+='<div class="aviso">'+esc(S.msg)+'</div>';
+ if(S.loginPasso==="tel"){
+  h+='<h2>Qual é o seu WhatsApp?</h2><p class="peq">Com DDD. Vamos mandar um código por lá para confirmar que o número é seu. Você só faz isso uma vez.</p>'+
+  '<input type="tel" inputmode="tel" placeholder="(46) 99999-9999" value="'+esc(S.telDig)+'" oninput="S.telDig=this.value">'+
+  '<button class="btn" onclick="pedirCodigo()">'+(S.enviando?"Enviando…":"Receber código no WhatsApp")+'</button>';
+ }else{
+  h+='<h2>Digite o código</h2><p class="peq">Mandamos um código de 6 números para o seu WhatsApp ('+esc(S.telDig)+'). Vale 10 minutos.</p>'+
+  '<input type="tel" inputmode="numeric" maxlength="6" placeholder="000000" value="'+esc(S.codigoDig)+'" oninput="S.codigoDig=this.value">'+
+  '<button class="btn" onclick="entrar()">'+(S.enviando?"Conferindo…":"Entrar")+'</button>'+
+  '<button class="btn sec" onclick="S.loginPasso=\'tel\';S.msg=\'\';render()">Trocar o número</button>';
+ }
+ return h+'<button class="rm" onclick="ir(\'checkout\')">Voltar</button></div>';
+}
+function pedirCodigo(){
+ if(S.enviando)return;S.enviando=true;S.msg="";render();
+ post("codigo",{tel:S.telDig}).then(function(r){S.enviando=false;
+  if(r&&r.ok){S.loginPasso="codigo";S.codigoDig="";try{localStorage.setItem("pc_tel",S.telDig)}catch(e){}}
+  else S.msg=r&&r.motivo==="telefone_invalido"?"Confira o número, com DDD.":(r&&(r.motivo==="muitos_codigos"||r.motivo==="limite_geral")?"Muitos códigos pedidos. Tente de novo mais tarde ou chame o restaurante pelo WhatsApp.":"Não consegui mandar o código. Tente de novo.");
+  render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
+}
+function entrar(){
+ if(S.enviando)return;S.enviando=true;S.msg="";render();
+ post("entrar",{tel:S.telDig,codigo:S.codigoDig}).then(function(r){S.enviando=false;
+  if(r&&r.ok){S.token=r.token;S.nome=r.nome||"";try{localStorage.setItem("pc_token",S.token);localStorage.setItem("pc_nome",S.nome)}catch(e){}S.msg="";ir("checkout");return}
+  S.msg=r&&r.motivo==="codigo_errado"?"Código errado. Confira e tente de novo.":(r&&r.motivo==="codigo_expirado"?"O código venceu ou errou 3 vezes. Peça um novo.":"Não consegui entrar. Tente de novo.");
+  if(r&&r.motivo==="codigo_expirado")S.loginPasso="tel";
+  render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
 }
 function copiaTexto(p){
  var l=["Pedido #"+p.id];
@@ -221,7 +281,8 @@ function render(){
  else if(v==="checkout")h=S.cart.length?vCheckout():vCart();
  else if(v==="done")h=vDone();
  else if(v==="pedidos")h=vPedidos();
- if(ABERTO===false||true){h='<div class="aviso">'+(REAL?'PROTÓTIPO — cardápio e preços reais do banco; o pedido ainda NÃO vai para o restaurante.':'PROTÓTIPO com dados de exemplo — nada aqui vai para o restaurante.')+'</div>'+h}
+ else if(v==="login")h=vLogin();
+ if(ABERTO===false||true){h='<div class="aviso">'+(REAL?'TESTE — cardápio real; o pedido entra de verdade no sistema e imprime na cozinha.':'PROTÓTIPO com dados de exemplo — nada aqui vai para o restaurante.')+'</div>'+h}
  var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
  if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
  if(S.sheet)h+=vSheet();
@@ -232,18 +293,19 @@ function render(){
 /* ===== Cardápio real (n8n -> Postgres). Se falhar, mostra a tela "chame o restaurante no WhatsApp" ===== */
 function aplicaApi(d){
  var G=[];
- if(d.ofertas&&d.ofertas.length)G.push({id:"ofertas",nome:"Ofertas",itens:d.ofertas.map(function(o,k){return{id:"o"+k,nome:o.nome,preco:Number(o.preco),desc:o.itens}})});
- if(d.tamanhos&&d.tamanhos.length)G.push({id:"marmitas",nome:"Marmitas",itens:d.tamanhos.map(function(t,k){return{id:"t"+k,nome:t.nome.replace(" c/ feijão separado"," — feijão separado"),preco:Number(t.preco)}})});
+ if(d.ofertas&&d.ofertas.length)G.push({id:"ofertas",nome:"Ofertas",itens:d.ofertas.map(function(o,k){return{id:"o"+k,nome:o.nome,preco:Number(o.preco),desc:o.itens,ref:{k:"oferta",nome:o.nome}}})});
+ if(d.tamanhos&&d.tamanhos.length)G.push({id:"marmitas",nome:"Marmitas",itens:d.tamanhos.map(function(t,k){return{id:"t"+k,nome:t.nome.replace(" c/ feijão separado"," — feijão separado"),preco:Number(t.preco),ref:{k:"tam",chave:t.chave}}})});
  G.push({id:"pers",nome:"Personalizada",tipo:"pers",itens:[{id:"PERS",nome:"Personalizada",preco:null}]});
  (d.por_unidade||[]).forEach(function(g){
   var pz=g.tipo==="PIZZA_CRUA_OU_ASSADA",id=pz?"pizza":(g.tipo==="SALADAS"?"saladas":"tapiocas");
-  var o={id:id,nome:pz?"Pizzas":(g.tipo==="SALADAS"?"Saladas":"Tapiocas"),itens:(g.itens||[]).map(function(i){return{id:"u"+i.id,nome:(pz?"Pizza de ":"")+i.nome,preco:Number(g.preco)}})};
+  var o={id:id,nome:pz?"Pizzas":(g.tipo==="SALADAS"?"Saladas":"Tapiocas"),itens:(g.itens||[]).map(function(i){return{id:"u"+i.id,nome:(pz?"Pizza de ":"")+i.nome,preco:Number(g.preco),ref:{k:"prod",id:i.id}}})};
   if(pz)o.escolha=["Crua","Assada"];
   G.push(o)});
- if(d.bebidas&&d.bebidas.length)G.push({id:"bebidas",nome:"Bebidas",itens:d.bebidas.map(function(b){return{id:"b"+b.id,nome:b.nome,preco:Number(b.preco)}})});
+ if(d.bebidas&&d.bebidas.length)G.push({id:"bebidas",nome:"Bebidas",itens:d.bebidas.map(function(b){return{id:"b"+b.id,nome:b.nome,preco:Number(b.preco),ref:{k:"prod",id:b.id}}})});
  if(G.length<3)throw new Error("cardapio vazio");
  GRUPOS=G;
  if(d.buffet&&d.buffet.length)BUFFET_HOJE=d.buffet;
+ (d.buffet_ids||[]).forEach(function(b){BUFFET_ID[b.nome]=b.id});
  var padrao=Number(d.taxa_padrao);if(isNaN(padrao))padrao=2;
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
  if(d.horario&&d.agora&&location.search.indexOf("fechado")<0){ABERTO=d.agora>=d.horario.horario_abre&&d.agora<d.horario.horario_fecha}
