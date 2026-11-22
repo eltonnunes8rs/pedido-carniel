@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 14:50 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 16:02 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -173,6 +173,7 @@ function copiaTexto(p){
  p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
  l.push(p.modo==="Entrega"?"Entrega: "+p.end.rua+", "+p.end.num+(p.end.comp?" - "+p.end.comp:"")+" - "+p.end.bairro:"Retirada no restaurante");
  l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
+ if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+brl(p.taxa))}
  l.push("Total: "+brl(p.total)+(p.pend?" + Personalizada(s) a pesar":""));
  l.push("");l.push("🔒 Este pedido já está salvo no sistema. Editar esta mensagem não altera nada. Para mudar, fale com a gente.");
  return l.join("\n");
