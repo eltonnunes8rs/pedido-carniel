@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:45 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 17:55 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -206,7 +206,7 @@ function pesar(k){var p=S.pedidos[k];p.itens.forEach(function(i){if(i.preco==nul
 /* ===== MONTAGEM ===== */
 function render(){
  if(STATUS!=="ok"){
-  var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.reload()">Tentar de novo</button>';
+  var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.href=location.pathname">Tentar de novo</button>';
   $("#app").innerHTML='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span></header><div class="pad">'+m+'</div>';$("#nav").innerHTML="";return;
  }
  var v=S.view,h="";
