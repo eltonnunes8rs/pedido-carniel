@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 17:55 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
+<!-- Versão 22/11/2026 18:05 - PROTÓTIPO do app de pedidos Carniel. Dados de EXEMPLO, não conectado ao banco. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -9,27 +9,27 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;color:#222}
   #app{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;padding-bottom:130px}
-  header{background:#b30000;color:#fff;padding:14px 16px;font-size:18px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}
+  header{background:#6b2832;color:#fff;padding:14px 16px;font-size:18px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}
   header small{font-weight:normal;font-size:12px;opacity:.9}
   .aviso{background:#fff3cd;color:#664d03;padding:8px 14px;font-size:12px}
   .pad{padding:16px}
   h2{margin:0 0 10px;font-size:18px}
-  .btn{display:block;width:100%;padding:15px;border:0;border-radius:10px;background:#b30000;color:#fff;font-size:17px;margin:10px 0;cursor:pointer}
-  .btn.sec{background:#fff;color:#b30000;border:2px solid #b30000}
+  .btn{display:block;width:100%;padding:15px;border:0;border-radius:10px;background:#6b2832;color:#fff;font-size:17px;margin:10px 0;cursor:pointer}
+  .btn.sec{background:#fff;color:#6b2832;border:2px solid #6b2832}
   .btn:disabled{background:#bbb}
   .tabs{display:flex;overflow-x:auto;border-bottom:1px solid #ddd;background:#fff;position:sticky;top:0}
   .tabs button{flex:0 0 auto;padding:13px 16px;border:0;background:none;font-size:15px;color:#666;border-bottom:3px solid transparent}
-  .tabs button.on{color:#b30000;border-color:#b30000;font-weight:bold}
+  .tabs button.on{color:#6b2832;border-color:#6b2832;font-weight:bold}
   .item{display:flex;justify-content:space-between;gap:10px;padding:15px 16px;border-bottom:1px solid #eee;cursor:pointer}
   .item .p{color:#0a7a3d;font-weight:bold;white-space:nowrap}
   .item .p.ac{color:#b36b00;font-size:13px;white-space:normal;text-align:right}
-  nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#b30000;display:flex}
+  nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#6b2832;display:flex}
   nav button{flex:1;padding:12px 4px;border:0;background:none;color:#fff;font-size:13px;opacity:.8}
   nav button.on{opacity:1;font-weight:bold;background:rgba(255,255,255,.15)}
   .sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:5}
   .sheet{background:#fff;width:100%;max-width:480px;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px}
   .qty{display:flex;align-items:center;gap:18px;margin:10px 0}
-  .qty button{width:44px;height:44px;border-radius:50%;border:2px solid #b30000;background:#fff;color:#b30000;font-size:24px}
+  .qty button{width:44px;height:44px;border-radius:50%;border:2px solid #6b2832;background:#fff;color:#6b2832;font-size:24px}
   .qty span{font-size:20px;min-width:24px;text-align:center}
   textarea,input,select{width:100%;padding:12px;border:1px solid #bbb;border-radius:8px;font-size:15px;margin:6px 0;font-family:inherit}
   label.ck{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #f0f0f0;font-size:16px}
@@ -41,9 +41,9 @@
   .box{border:1px solid #ddd;border-radius:10px;padding:12px;margin:10px 0}
   pre{white-space:pre-wrap;background:#f1f8f1;border:1px solid #bfe0bf;border-radius:8px;padding:12px;font-size:14px;margin:8px 0}
   .peq{font-size:12px;color:#777}
-  .rm{color:#b30000;background:none;border:0;font-size:13px;padding:0}
+  .rm{color:#6b2832;background:none;border:0;font-size:13px;padding:0}
   .logo{width:38px;height:38px;border-radius:50%;margin-right:10px;vertical-align:middle;background:#fff}
-  .barra{position:fixed;left:0;right:0;bottom:44px;max-width:480px;margin:0 auto;background:#0a7a3d;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:16px;cursor:pointer;z-index:4;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
+  .barra{position:fixed;left:0;right:0;bottom:44px;max-width:480px;margin:0 auto;background:#f0a030;color:#3a1218;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:16px;cursor:pointer;z-index:4;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
   .barra b{font-size:18px}
   .barra small{display:block;font-size:11px;opacity:.9}
 </style>
