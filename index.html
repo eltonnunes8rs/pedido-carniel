@@ -111,7 +111,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-23.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-23.2";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -148,7 +148,7 @@ function vHome(){
  }else{
   h+='<h2>Pedidos encerrados por hoje</h2><p>Atendemos pelo app das 09:30 às 13:30. Você pode ver seus pedidos de hoje.</p><button class="btn sec" onclick="ir(\'pedidos\')">Ver meus pedidos</button>';
  }
- return h+vInstalar()+'</div>';
+ return h+vInstalar()+'<div class="peq" style="text-align:center;margin-top:18px">versão '+VERSAO+'</div></div>';
 }
 function escolherModo(m){S.modo=m;track("modo",{modo:m});ir("menu")}
 function vMenu(){
