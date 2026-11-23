@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
+<!-- Versão 22/11/2026 23:55 (talheres) — antes: 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -76,7 +76,7 @@ var API=BASE+"cardapio";
 var BUFFET_ID={};
 
 /* ===== ESTADO ===== */
-var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",pedidos:[],enderecos:[],ultimo:null};
+var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",talh:1,pedidos:[],enderecos:[],ultimo:null};
 try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
 try{S.token=localStorage.getItem("pc_token")||"";S.nome=localStorage.getItem("pc_nome")||"";S.telDig=localStorage.getItem("pc_tel")||""}catch(e){S.token="";S.nome="";S.telDig=""}
 S.loginPasso="tel";S.msg="";S.zapBtn=false;S.volta="checkout";S.meus=null;S.meusCarregando=false;S.enviando=false;S.chave=null;S.nomeDig="";S.codigoDig="";
@@ -202,6 +202,7 @@ function vCheckout(){
   '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
  }
  if(REAL&&!S.nome)h+='<h2>Seu nome</h2><input placeholder="Como podemos te chamar?" value="'+esc(S.nomeDig)+'" oninput="S.nomeDig=this.value">';
+ h+='<h2>Talheres</h2><select onchange="S.talh=Number(this.value);salvar();render()">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'" '+(S.talh===n?"selected":"")+'>'+(n===0?"Não preciso de talheres":n+(n===1?" talher":" talheres"))+'</option>'}).join("")+'</select>';
  h+='<h2>Pagamento (na entrega/retirada)</h2>';
  ["Pix","Cartão","Dinheiro"].forEach(function(p){h+='<label class="ck"><input type="radio" name="pag" '+(S.pag===p?"checked":"")+' onchange="S.pag=\''+p+'\';render()"> '+p+'</label>'});
  if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value;salvar()">';
@@ -243,7 +244,7 @@ function finalizar(){
  if(!S.nome&&!S.nomeDig.trim()){alert("Escreva o seu nome.");return}
  if(S.cart.some(function(l){return !l.pers&&!l.ref})){S.cart=[];salvar();alert("O seu carrinho era de uma versão antiga. Monte o pedido de novo.");ir("menu");return}
  if(!S.chave)S.chave=String(Date.now())+Math.random().toString(36).slice(2,8);
- var dados={chave:S.chave,nome:S.nome||S.nomeDig.trim(),modo:S.modo,end:S.modo==="Entrega"?S.end:null,pag:S.pag,troco:S.troco,
+ var dados={chave:S.chave,nome:S.nome||S.nomeDig.trim(),modo:S.modo,end:S.modo==="Entrega"?S.end:null,pag:S.pag,troco:S.troco,talheres:S.talh,
   itens:S.cart.map(function(l){return l.pers?{k:"pers",marcados:l.marcados.map(function(n){return BUFFET_ID[n]}),obs:l.obs}:{k:l.ref.k,nome:l.ref.nome,chave:l.ref.chave,id:l.ref.id,esc:l.esc,qtd:l.qtd,obs:l.obs}})};
  S.enviando=true;render();
  post("pedido",{token:S.token,dados:dados}).then(function(r){
@@ -254,7 +255,7 @@ function finalizar(){
  }).catch(function(){S.enviando=false;alert(msgErro());render()});
 }
 function concluir(num,t){
- var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
+ var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,talh:S.talh,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
  if(p.end){var ja=S.enderecos.some(function(e){return e.rua===p.end.rua&&e.num===p.end.num&&e.bairro===p.end.bairro});if(!ja)S.enderecos.push(JSON.parse(JSON.stringify(p.end)));salvaEndBanco(p.end)}
  S.pedidos.unshift(p);S.ultimo=p;S.cart=[];salvar();ir("done");
 }
@@ -295,7 +296,7 @@ function copiaTexto(p){
  var l=["Pedido #"+p.id];
  p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
  l.push(p.modo==="Entrega"?"Entrega: "+p.end.rua+", "+p.end.num+(p.end.comp?" - "+p.end.comp:"")+" - "+p.end.bairro:"Retirada no restaurante");
- l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
+ l.push(p.talh>0?"Talheres: "+p.talh:"Sem talheres");l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
  if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+(p.end.bairro===COMBINAR?"a combinar":brl(p.taxa)))}
  l.push("Total: "+brl(p.total)+(p.pend?" + Personalizada(s) a pesar":""));
  l.push("");l.push("🔒 Este pedido já está salvo no sistema. Editar esta mensagem não altera nada. Para mudar, fale com a gente.");
