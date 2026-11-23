@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 23/11/2026 00:05 (talheres R$ 1,00 cada) — antes: 22/11/2026 23:55 (talheres) — antes: 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
+<!-- Versão 23/11/2026 00:20 (talheres no carrinho e no subtotal) — antes: 00:05 (talheres R$ 1,00 cada) — antes: 22/11/2026 23:55 (talheres) — antes: 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -183,10 +183,12 @@ function vCart(){
  });
  h+='<div class="peq">Quer adicionar alguma bebida?</div>';
  grupoDe("bebidas").itens.forEach(function(b){h+='<span class="chip" onclick="addBebida(\''+b.id+'\')">+ '+esc(b.nome)+' '+brl(b.preco)+'</span>'});
- var t=totais(S.cart,0);
+ h+='<div class="box"><b>🍴 Talheres</b> <span class="peq">'+brl(PRECO_TALHER)+' cada</span><div class="qty"><button onclick="talher(-1)">−</button><span>'+(S.talh||0)+'</span><button onclick="talher(1)">+</button><span style="margin-left:auto;font-size:15px">'+(S.talh>0?brl(valTalh()):"não preciso")+'</span></div></div>';
+ var t=totais(S.cart,0);t.sub+=valTalh();
  h+='<div class="linha tot"><span>Subtotal</span><span>'+brl(t.sub)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem.</div>':'');
  return h+'<button class="btn" onclick="ir(\'checkout\')">Fechar pedido</button><button class="btn sec" onclick="ir(\'menu\')">Adicionar mais itens</button></div>';
 }
+function talher(d){S.talh=Math.max(0,Math.min(10,(S.talh||0)+d));salvar();render()}
 function cartQtd(k,d){S.cart[k].qtd+=d;if(S.cart[k].qtd<1)S.cart.splice(k,1);renum();render()}
 function addBebida(id){var b=grupoDe("bebidas").itens.filter(function(x){return String(x.id)===String(id)})[0];var ex=S.cart.filter(function(l){return l.nome===b.nome&&!l.obs})[0];if(ex)ex.qtd++;else S.cart.push({ref:b.ref,nome:b.nome,preco:b.preco,qtd:1,obs:"",marcados:[]});track("item_add",{nome:b.nome});render()}
 
@@ -366,7 +368,7 @@ function render(){
  if(REAL&&S.token&&S.telDig)h='<div class="logado"><span>📱 '+(S.nome?esc(S.nome.split(" ")[0])+' · ':'')+esc(telFmt(S.telDig))+'</span><button class="rm" onclick="sair()">Sair</button></div>'+h;
  if(!REAL){h='<div class="aviso">EXEMPLO — dados de mentira, nada aqui vai para o restaurante.</div>'+h}
  var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
- if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
+ if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);tb.sub+=valTalh();h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
  if(S.sheet)h+=vSheet();
  $("#app").innerHTML=h;
  var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
