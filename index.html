@@ -1,10 +1,18 @@
 <!DOCTYPE html>
-<!-- Versão 22/11/2026 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
+<!-- Versão 22/11/2026 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pedido Carniel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6b2832">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Carniel">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <style>
   *{box-sizing:border-box}
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;color:#222}
@@ -86,7 +94,9 @@ function brl(v){return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function grupoDe(gid){return GRUPOS.filter(function(g){return g.id===gid})[0]}
 function totais(linhas,taxa){var sub=0,pend=false;linhas.forEach(function(l){if(l.preco==null){pend=true}else{sub+=l.preco*l.qtd}});return {sub:sub,taxa:taxa||0,total:sub+(taxa||0),pend:pend}}
-function taxaAtual(){if(S.modo!=="Entrega")return 0;var b=BAIRROS.filter(function(x){return x.n===S.end.bairro})[0];return b?b.t:0}
+var COMBINAR="A combinar";
+function combinar(){return S.modo==="Entrega"&&S.end.bairro===COMBINAR}
+function taxaAtual(){if(S.modo!=="Entrega"||S.end.bairro===COMBINAR)return 0;var b=BAIRROS.filter(function(x){return x.n===S.end.bairro})[0];return b?b.t:0}
 function telFmt(t){var d=String(t||"").replace(/\D/g,"");if(d.length>=12&&d.indexOf("55")===0)d=d.slice(2);if(d.length===11)return"("+d.slice(0,2)+") "+d.slice(2,7)+"-"+d.slice(7);if(d.length===10)return"("+d.slice(0,2)+") "+d.slice(2,6)+"-"+d.slice(6);return String(t||"")}
 function sair(){S.token="";S.nome="";S.meus=null;S.enderecos=[];try{localStorage.removeItem("pc_token");localStorage.removeItem("pc_nome");localStorage.removeItem("pc_end")}catch(e){}track("saiu");render()}
 function ir(v){
@@ -97,6 +107,21 @@ function ir(v){
  render();window.scrollTo(0,0)}
 
 /* ===== TELAS ===== */
+/* ===== Instalar como app (Android: botão; iPhone: instrução) ===== */
+var INST=null;
+var JA_APP=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+var IOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+var INST_FECHADO=false;try{INST_FECHADO=localStorage.getItem("carniel_inst_fechado")==="1"}catch(e){}
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();INST=e;if(S.view==="home")render()});
+window.addEventListener("appinstalled",function(){INST=null;JA_APP=true;track("app_instalado",{});render()});
+function instalar(){if(!INST)return;track("clicou_instalar",{});INST.prompt();INST.userChoice.then(function(r){track("instalar_resposta",{r:r.outcome});INST=null;render()}).catch(function(){})}
+function fechaInst(){INST_FECHADO=true;try{localStorage.setItem("carniel_inst_fechado","1")}catch(e){}render()}
+function vInstalar(){
+ if(JA_APP||INST_FECHADO)return"";
+ if(INST)return'<div class="box"><b>📲 Instale o app</b><div class="peq">Fica na tela do seu celular, sem precisar procurar o link.</div><button class="btn" onclick="instalar()">Instalar o app</button><button class="rm" onclick="fechaInst()">Agora não</button></div>';
+ if(IOS)return'<div class="box"><b>📲 Instale o app</b><div class="peq">No iPhone: toque em <b>Compartilhar</b> (o quadradinho com a seta) e depois em <b>Adicionar à Tela de Início</b>.</div><button class="rm" onclick="fechaInst()">Entendi</button></div>';
+ return"";
+}
 function vHome(){
  var h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
  if(ABERTO){
@@ -104,7 +129,7 @@ function vHome(){
  }else{
   h+='<h2>Pedidos encerrados por hoje</h2><p>Atendemos pelo app das 09:30 às 13:30. Você pode ver seus pedidos de hoje.</p><button class="btn sec" onclick="ir(\'pedidos\')">Ver meus pedidos</button>';
  }
- return h+'</div>';
+ return h+vInstalar()+'</div>';
 }
 function escolherModo(m){S.modo=m;track("modo",{modo:m});ir("menu")}
 function vMenu(){
@@ -170,7 +195,7 @@ function vCheckout(){
  if(S.modo==="Entrega"){
   h+='<h2>Endereço</h2>';
   S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+' <b onclick="event.stopPropagation();apagaEnd('+k+')" style="margin-left:6px">✕</b></span>'});
-  h+='<select onchange="S.end.bairro=this.value;render()">'+BAIRROS.map(function(b){return '<option '+(S.end.bairro===b.n?"selected":"")+'>'+esc(b.n)+'</option>'}).join("")+'</select>'+
+  h+='<select onchange="S.end.bairro=this.value;render()">'+BAIRROS.map(function(b){return '<option '+(S.end.bairro===b.n?"selected":"")+'>'+esc(b.n)+'</option>'}).join("")+'<option value="'+COMBINAR+'" '+(S.end.bairro===COMBINAR?"selected":"")+'>Outro local — frete a combinar</option></select>'+(S.end.bairro===COMBINAR?'<div class="peq">Escreva a cidade ou o bairro no campo Complemento. Nós confirmamos o valor do frete com você no WhatsApp.</div>':'')+
   '<input placeholder="Rua" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
   '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value;salvar()">'+
   '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
@@ -181,8 +206,8 @@ function vCheckout(){
  ["Pix","Cartão","Dinheiro"].forEach(function(p){h+='<label class="ck"><input type="radio" name="pag" '+(S.pag===p?"checked":"")+' onchange="S.pag=\''+p+'\';render()"> '+p+'</label>'});
  if(S.pag==="Dinheiro")h+='<input placeholder="Troco para quanto? (opcional)" value="'+esc(S.troco)+'" oninput="S.troco=this.value;salvar()">';
  var t=totais(S.cart,taxaAtual());
- h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+brl(t.taxa)+'</span></div>':'')+
- '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
+ h+='<div class="box"><div class="linha"><span>Itens</span><span>'+brl(t.sub)+'</span></div>'+(S.modo==="Entrega"?'<div class="linha"><span>Taxa de entrega</span><span>'+(combinar()?"a combinar":brl(t.taxa))+'</span></div>':'')+
+ '<div class="linha tot"><span>Total</span><span>'+brl(t.total)+(combinar()?' + frete':'')+'</span></div>'+(t.pend?'<div class="peq">Mais o valor das Personalizadas, definido na pesagem. Você recebe o valor no WhatsApp.</div>':'')+'</div>';
  return h+'<button class="btn" onclick="finalizar()">'+(S.enviando?"Enviando…":"Enviar pedido")+'</button><button class="btn sec" onclick="ir(\'menu\')">Voltar ao cardápio</button></div>';
 }
 function usaEnd(k){S.end=JSON.parse(JSON.stringify(S.enderecos[k]));render()}
@@ -271,7 +296,7 @@ function copiaTexto(p){
  p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
  l.push(p.modo==="Entrega"?"Entrega: "+p.end.rua+", "+p.end.num+(p.end.comp?" - "+p.end.comp:"")+" - "+p.end.bairro:"Retirada no restaurante");
  l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
- if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+brl(p.taxa))}
+ if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+(p.end.bairro===COMBINAR?"a combinar":brl(p.taxa)))}
  l.push("Total: "+brl(p.total)+(p.pend?" + Personalizada(s) a pesar":""));
  l.push("");l.push("🔒 Este pedido já está salvo no sistema. Editar esta mensagem não altera nada. Para mudar, fale com a gente.");
  return l.join("\n");
@@ -295,8 +320,9 @@ function vPedidosBanco(){
    if(i.tipo_venda==="KG"){kg=true;var g=i.grupo||"Personalizada";if(!pers[g]){pers[g]=[];ordem.push(g)}pers[g].push(i.produto)}
    else h+='<div class="linha"><span>'+(i.quantidade||1)+'x '+esc(i.produto||"")+'</span><span>'+(i.preco_unit!=null?brl(Number(i.preco_unit)*(i.quantidade||1)):"")+'</span></div>'+(i.observacao?'<div class="peq">Obs: '+esc(i.observacao)+'</div>':'')});
   ordem.forEach(function(g){h+='<div class="linha"><span>'+esc(g==="Cardápio Completo"?"Personalizada":g)+'</span><span>'+(p.pesado?"":"a pesar")+'</span></div><div class="peq">'+esc(pers[g].join(", "))+'</div>'});
-  if(p.modo==="ENTREGA"&&Number(p.taxa)>0)h+='<div class="linha"><span>Taxa de entrega</span><span>'+brl(Number(p.taxa))+'</span></div>';
-  h+='<div class="linha tot"><span>Total</span><span>'+brl(Number(p.total||0))+((kg&&!p.pesado)?' + pesagem':'')+'</span></div></div>';
+  if(p.modo==="ENTREGA"&&p.frete_a_combinar)h+='<div class="linha"><span>Taxa de entrega</span><span>a combinar</span></div>';
+  else if(p.modo==="ENTREGA"&&Number(p.taxa)>0)h+='<div class="linha"><span>Taxa de entrega</span><span>'+brl(Number(p.taxa))+'</span></div>';
+  h+='<div class="linha tot"><span>Total</span><span>'+brl(Number(p.total||0))+((kg&&!p.pesado)?' + pesagem':'')+(p.frete_a_combinar?' + frete':'')+'</span></div></div>';
  });
  return h+'</div>';
 }
@@ -367,6 +393,7 @@ if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Erro
 if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";track("falha_cardapio",{motivo:"demora"});render()}},12000);
 
 render();
+if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
 </body>
 </html>
