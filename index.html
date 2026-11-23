@@ -110,6 +110,22 @@ function ir(v){
  render();window.scrollTo(0,0)}
 
 /* ===== TELAS ===== */
+/* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
+var VERSAO="2026-11-23.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var NOVA=false;
+function confereVersao(){
+ if(location.protocol!=="https:")return;
+ fetch("index.html?v="+Date.now(),{cache:"no-store"}).then(function(r){return r.text()}).then(function(t){
+  var m=t.match(/var VERSAO="([^"]+)"/);
+  if(m&&m[1]!==VERSAO&&!NOVA){NOVA=true;render()}
+ }).catch(function(){});
+}
+function atualizaApp(){
+ var fim=function(){location.reload()};
+ if(window.caches&&caches.keys)caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}).then(fim,fim);else fim();
+}
+document.addEventListener("visibilitychange",function(){if(!document.hidden)confereVersao()});
+setTimeout(confereVersao,4000);
 /* ===== Instalar como app (Android: botão; iPhone: instrução) ===== */
 var INST=null;
 var JA_APP=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
@@ -366,6 +382,7 @@ function render(){
  else if(v==="pedidos")h=vPedidos();
  else if(v==="login")h=vLogin();
  if(REAL&&S.token&&S.telDig)h='<div class="logado"><span>📱 '+(S.nome?esc(S.nome.split(" ")[0])+' · ':'')+esc(telFmt(S.telDig))+'</span><button class="rm" onclick="sair()">Sair</button></div>'+h;
+ if(NOVA)h='<div class="aviso" style="background:#d1e7dd;color:#0f5132;cursor:pointer;font-size:14px;text-align:center" onclick="atualizaApp()"><b>🔄 Nova versão do app — toque aqui para atualizar</b></div>'+h;
  if(!REAL){h='<div class="aviso">EXEMPLO — dados de mentira, nada aqui vai para o restaurante.</div>'+h}
  var q=S.cart.reduce(function(a,l){return a+l.qtd},0);
  if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);tb.sub+=valTalh();h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
