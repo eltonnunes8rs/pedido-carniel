@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Versão 23/11/2026 00:20 (talheres no carrinho e no subtotal) — antes: 00:05 (talheres R$ 1,00 cada) — antes: 22/11/2026 23:55 (talheres) — antes: 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
+<!-- Versão 23/11/2026 06:40 (horários: sem cardápio, fora do horário, entrega só até entrega_ate) — antes: 00:20 (talheres no carrinho e no subtotal) — antes: 00:05 (talheres R$ 1,00 cada) — antes: 22/11/2026 23:55 (talheres) — antes: 23:40 (frete a combinar + instalar como app) — antes: 20:30 (mostra o telefone de quem está logado, com Sair) — antes: 20:00 - App de pedidos do Restaurante Carniel (cardápio, login, pedido, Meus pedidos, endereços e métricas ligados ao banco). ?exemplo=1 = dados de exemplo; ?falha=1 = tela de falha; ?fechado=1 = simula fechado. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -68,6 +68,14 @@ var GRUPOS=[{"id": "ofertas", "nome": "Ofertas", "itens": [{"id": 1, "nome": "Bo
 var BUFFET_HOJE=["Arroz branco","Arroz integral","Feijão","Lentilha","Macarrão ao molho vermelho","Mandioca cozida","Fortaia","Farofa","Batatinha frita","Polenta sapecada","Ovo frito","Repolho e couve refogado","Radite refogado com bacon e ovo","Frango com creme de milho","Pizza doce","Pizza salgada","Bolinho de pão doce","Bolinho de pão","Banana frita","Chuleta / bife de gado na chapa","Filé de frango na chapa","Costelinha de porco frita","Carne de gado ao molho"];
 /* No teste: adicione ?fechado=1 no endereço para ver o app fechado */
 var ABERTO=location.search.indexOf("fechado")<0;
+var HORA=null,AGORA0=0,T0=0,SEM_CARD=false,ENTREGA_OK=true;   // horário vem do banco (horario_abre, horario_fecha, entrega_ate)
+function minTxt(t){var p=String(t||"").split(":");return Number(p[0])*60+Number(p[1]||0)}
+function agoraTxt(){var m=(AGORA0+Math.floor((Date.now()-T0)/60000))%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
+function hr(){return HORA||{abre:"09:30",fecha:"13:30",entrega:"13:00"}}
+function recalc(){
+ if(!HORA||location.search.indexOf("fechado")>=0)return;
+ var a=agoraTxt();ABERTO=!SEM_CARD&&a>=HORA.abre&&a<HORA.fecha;ENTREGA_OK=!HORA.entrega||a<HORA.entrega;
+ if(!ENTREGA_OK&&S.modo==="Entrega")S.modo="Retirada"}
 var REAL=false;
 var STATUS=location.search.indexOf("falha")>=0?"falha":(location.search.indexOf("exemplo")>=0?"ok":"carregando");  // carregando | ok | falha (?exemplo=1 usa o cardápio de exemplo; ?falha=1 mostra a tela de falha)
 var ZAP="554991680422";  // WhatsApp do restaurante (confirmar)  // true quando o cardápio veio do banco (n8n)
@@ -111,7 +119,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-23.3";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-23.4";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -142,11 +150,18 @@ function vInstalar(){
  return"";
 }
 function vHome(){
- var h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
+ var H=hr(),h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
  if(ABERTO){
-  h+='<h2>Como quer receber?</h2><button class="btn" onclick="escolherModo(\'Entrega\')">🛵 Entrega</button><button class="btn" onclick="escolherModo(\'Retirada\')">🏪 Retirada</button>';
+  h+='<h2>Como quer receber?</h2>';
+  if(ENTREGA_OK)h+='<button class="btn" onclick="escolherModo(\'Entrega\')">🛵 Entrega</button>';
+  h+='<button class="btn" onclick="escolherModo(\'Retirada\')">🏪 Retirada</button>';
+  if(HORA&&HORA.entrega)h+='<div class="peq">'+(ENTREGA_OK?'Entrega até as '+HORA.entrega+'. Depois disso, só retirada.':'Depois das '+HORA.entrega+' o pedido é só para retirada.')+'</div>';
  }else{
-  h+='<h2>Pedidos encerrados por hoje</h2><p>Atendemos pelo app das 09:30 às 13:30. Você pode ver seus pedidos de hoje.</p><button class="btn sec" onclick="ir(\'pedidos\')">Ver meus pedidos</button>';
+  var a=agoraTxt(),qdo='Os pedidos pelo app são feitos das '+H.abre+' às '+H.fecha+'.';
+  if(SEM_CARD)h+='<h2>O cardápio de hoje ainda não está disponível</h2><p>'+qdo+' Volte mais tarde, quando o cardápio do dia estiver publicado.</p>';
+  else if(HORA&&a<H.abre)h+='<h2>Ainda não estamos recebendo pedidos</h2><p>'+qdo+'</p>';
+  else h+='<h2>Pedidos encerrados por hoje</h2><p>'+qdo+'</p>';
+  h+='<button class="btn sec" onclick="ir(\'pedidos\')">Ver meus pedidos</button>';
  }
  return h+vInstalar()+'<div class="peq" style="text-align:center;margin-top:18px">versão '+VERSAO+'</div></div>';
 }
@@ -251,12 +266,15 @@ function carregaMeus(){
  post("meus-pedidos",{token:S.token}).then(function(r){S.meusCarregando=false;S.meus=(r&&r.ok&&Array.isArray(r.lista))?r.lista:null;if(S.view==="pedidos")render()}).catch(function(){S.meusCarregando=false;S.meus=null;if(S.view==="pedidos")render()})}
 function msgErro(m){m=String(m||"");
  if(m==="fechado")return"O restaurante não está recebendo pedidos agora.";
+ if(m==="entrega_encerrada")return"Depois das "+(hr().entrega||"13:00")+" só fazemos retirada. Volte e escolha Retirada.";
  if(m.indexOf("indisponivel")===0)return"Um item do seu carrinho acabou ou saiu do cardápio. Volte ao cardápio e confira.";
  if(m==="muitos_pedidos")return"Muitos pedidos seguidos. Chame o restaurante pelo WhatsApp.";
  if(m==="endereco_incompleto")return"Preencha rua e número.";
  if(m==="pizza_crua_ou_assada")return"Escolha se a pizza é crua ou assada.";
  return"Não consegui enviar o pedido. Tente de novo ou chame o restaurante pelo WhatsApp."}
 function finalizar(){
+ var eraModo=S.modo;recalc();
+ if(REAL&&eraModo==="Entrega"&&!ENTREGA_OK){alert("Depois das "+hr().entrega+" só fazemos retirada. O pedido foi mudado para Retirada: confira e envie de novo.");render();return}
  if(S.modo==="Entrega"&&(!S.end.rua.trim()||!S.end.num.trim())){alert("Preencha rua e número.");return}
  if(S.enviando)return;
  var t=totCart();
@@ -367,7 +385,7 @@ function pesar(k){var p=S.pedidos[k];p.itens.forEach(function(i){if(i.preco==nul
 
 /* ===== MONTAGEM ===== */
 function render(){
- salvar();
+ recalc();salvar();
  if(STATUS!=="ok"){
   var m=STATUS==="carregando"?'<h2>Carregando o cardápio…</h2><p>Só um instante.</p>':'<h2>Não consegui abrir o cardápio 😕</h2><p>Chame o restaurante pelo WhatsApp que a gente anota o seu pedido.</p><a class="btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" onclick="track(\'clicou_zap\',{de:\'falha\'})" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Não consegui usar o app de pedidos, quero fazer um pedido.")+'">Chamar o restaurante no WhatsApp</a><button class="btn sec" style="margin-top:10px" onclick="location.href=location.pathname">Tentar de novo</button>';
   $("#app").innerHTML='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span></header><div class="pad">'+m+'</div>';$("#nav").innerHTML="";return;
@@ -403,14 +421,14 @@ function aplicaApi(d){
   if(pz)o.escolha=["Crua","Assada"];
   G.push(o)});
  if(d.bebidas&&d.bebidas.length)G.push({id:"bebidas",nome:"Bebidas",itens:d.bebidas.map(function(b){return{id:"b"+b.id,nome:b.nome,preco:Number(b.preco),ref:{k:"prod",id:b.id}}})});
- if(G.length<3)throw new Error("cardapio vazio");
+ if(d.horario&&d.agora){HORA={abre:d.horario.horario_abre||"00:00",fecha:d.horario.horario_fecha||"23:59",entrega:d.horario.entrega_ate||""};AGORA0=minTxt(d.agora);T0=Date.now()}
+ if(G.length<3){SEM_CARD=true;GRUPOS=G;S.grupo=G[0].id;REAL=true;STATUS="ok";return}   // sem cardápio publicado hoje: não é falha, é dia sem cardápio
  GRUPOS=G;
  if(d.buffet&&d.buffet.length)BUFFET_HOJE=d.buffet;
  (d.buffet_ids||[]).forEach(function(b){BUFFET_ID[b.nome]=b.id});
  if(d.preco_talher!=null&&!isNaN(Number(d.preco_talher)))PRECO_TALHER=Number(d.preco_talher);
  var padrao=Number(d.taxa_padrao);if(isNaN(padrao))padrao=2;
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
- if(d.horario&&d.agora&&location.search.indexOf("fechado")<0){ABERTO=d.agora>=d.horario.horario_abre&&d.agora<d.horario.horario_fecha}
  S.grupo=G[0].id;REAL=true;STATUS="ok";
 }
 if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
