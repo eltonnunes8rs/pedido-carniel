@@ -18,3 +18,4 @@ Observações
 - O número de teste do dono foi trocado por `00000000` nos arquivos. Troque pelos 8 últimos dígitos do seu telefone antes de rodar.
 - Os nomes (`carniel_*`) são do restaurante; em outro projeto, trocar o prefixo e adaptar as regras.
 - Contexto geral do app: ../docs/CONTEXTO.md
+- `11_relatorio_dia_app.sql` — relatório das 14h ganha o bloco "📱 App de pedidos" (pedidos pelo app, clientes, aparelhos que abriram/instalaram).
