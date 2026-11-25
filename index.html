@@ -109,17 +109,18 @@ var COMBINAR="A combinar";
 function combinar(){return S.modo==="Entrega"&&S.end.bairro===COMBINAR}
 function taxaAtual(){if(S.modo!=="Entrega"||S.end.bairro===COMBINAR)return 0;var b=BAIRROS.filter(function(x){return x.n===S.end.bairro})[0];return b?b.t:0}
 function telFmt(t){var d=String(t||"").replace(/\D/g,"");if(d.length>=12&&d.indexOf("55")===0)d=d.slice(2);if(d.length===11)return"("+d.slice(0,2)+") "+d.slice(2,7)+"-"+d.slice(7);if(d.length===10)return"("+d.slice(0,2)+") "+d.slice(2,6)+"-"+d.slice(6);return String(t||"")}
-function sair(){S.convenio=false;if(S.pag==="Convênio")S.pag="Pix";S.token="";S.nome="";S.meus=null;S.enderecos=[];try{localStorage.removeItem("pc_token");localStorage.removeItem("pc_nome");localStorage.removeItem("pc_end")}catch(e){}track("saiu");render()}
+function sair(){S.convenio=false;S.admin=false;S.ac=null;if(S.pag==="Convênio")S.pag="Pix";S.token="";S.nome="";S.meus=null;S.enderecos=[];try{localStorage.removeItem("pc_token");localStorage.removeItem("pc_nome");localStorage.removeItem("pc_end")}catch(e){}track("saiu");render()}
 function ir(v){
  if(v==="checkout"&&S.view!=="checkout")track("fechar",{itens:S.cart.length});
  S.view=v;
  if(v==="pedidos")carregaMeus();
+ if(v==="admin"&&S.admin&&!(S.ac&&S.ac.secoes))acCarrega(S.ac&&S.ac.data);
  if(v==="checkout")carregaEnderecos();
  render();window.scrollTo(0,0)}
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-23.5";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-25.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -331,7 +332,7 @@ function pedirCodigo(){
 function entrar(){
  if(S.enviando)return;S.enviando=true;S.msg="";render();
  post("entrar",{tel:S.telDig,codigo:S.codigoDig}).then(function(r){S.enviando=false;
-  if(r&&r.ok){S.token=r.token;S.nome=r.nome||"";try{localStorage.setItem("pc_token",S.token);localStorage.setItem("pc_nome",S.nome)}catch(e){}S.msg="";track("logou");var vv=S.volta||"checkout";S.volta="checkout";ir(vv);return}
+  if(r&&r.ok){S.token=r.token;S.nome=r.nome||"";S.admin=false;S.ac=null;try{localStorage.setItem("pc_token",S.token);localStorage.setItem("pc_nome",S.nome)}catch(e){}S.msg="";track("logou");checaAdmin();var vv=S.volta||"checkout";S.volta="checkout";ir(vv);return}
   S.msg=r&&r.motivo==="codigo_errado"?"Código errado. Confira e tente de novo.":(r&&r.motivo==="codigo_expirado"?"O código venceu ou errou 3 vezes. Peça um novo.":"Não consegui entrar. Tente de novo.");
   if(r&&r.motivo==="codigo_expirado")S.loginPasso="tel";
   render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
@@ -371,6 +372,73 @@ function vPedidosBanco(){
  });
  return h+'</div>';
 }
+/* ===== ADMIN: Cardápio do dia (só aparece para quem é ADMIN no banco) ===== */
+function hojeBR(){var d=new Date(Date.now()-3*3600*1000);return d.toISOString().slice(0,10)}
+function somaDias(iso,n){var d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+var DSEM=["domingo","segunda","terça","quarta","quinta","sexta","sábado"];
+function checaAdmin(){
+ if(!REAL||!S.token){S.admin=false;return}
+ post("admin-cardapio",{token:S.token,data:hojeBR()}).then(function(r){
+  if(r&&r.ok&&r.secoes){S.admin=true;S.ac=S.ac||{};if(!S.ac.secoes){S.ac.data=r.data;S.ac.dados=r}render()}else{S.admin=false}}).catch(function(){S.admin=false})}
+function acCarrega(data,copiar){
+ S.ac=S.ac||{};S.ac.carregando=true;S.ac.msg="";S.ac.erro="";render();
+ var b={token:S.token,data:data||S.ac.data||hojeBR()};if(copiar)b.copiar_de=copiar;
+ post("admin-cardapio",b).then(function(r){S.ac.carregando=false;
+  if(r&&r.ok&&r.secoes){S.ac.data=r.data;S.ac.secoes=r.secoes;S.ac.salvo=r.salvo;S.ac.mensagem=r.mensagem||"";S.ac.copiado=r.copiado_de||"";S.ac.dow=r.dow}
+  else{S.ac.erro=(r&&r.erro==="sem_permissao")?"Sem permissão.":"Não consegui abrir o cardápio do dia."}
+  render()}).catch(function(){S.ac.carregando=false;S.ac.erro="Não consegui falar com o servidor.";render()})}
+function acTog(si,ii,v){var it=S.ac.secoes[si].itens[ii];it.marcado=!!v;acConta(si)}
+function acConta(si){var n=S.ac.secoes[si].itens.filter(function(i){return i.marcado}).length;var e=document.getElementById("acn"+si);if(e)e.textContent=n}
+function acObs(si,ii,v){S.ac.secoes[si].itens[ii].obs=v}
+function acNorm(s){return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim()}
+function acNovo(si){
+ var inp=document.getElementById("acnv"+si),nome=(inp.value||"").replace(/\s+/g," ").trim();if(!nome)return;
+ var sec=S.ac.secoes[si],n=acNorm(nome),ex=sec.itens.filter(function(i){var m=acNorm(i.nome);return m===n});
+ if(ex.length){ex[0].marcado=true;inp.value="";render();return}
+ var sim=sec.itens.filter(function(i){var m=acNorm(i.nome);return m.indexOf(n)>=0||n.indexOf(m)>=0});
+ if(sim.length&&!confirm('Já existe "'+sim[0].nome+'". Criar "'+nome+'" como item novo mesmo assim?'))return;
+ sec.itens.unshift({id:null,nome:nome,marcado:true,novo:true});inp.value="";render()}
+function acSalvar(){
+ var a=S.ac;if(a.salvando)return;
+ var secs=a.secoes.map(function(s){return{key:s.key,itens:s.itens.filter(function(i){return i.marcado}).map(function(i){var o={obs:i.obs||null};if(i.id)o.id=i.id;else o.nome=i.nome;return o})}});
+ if(!secs.some(function(s){return s.itens.length})){a.erro="Marque pelo menos um item.";render();return}
+ a.salvando=true;a.erro="";a.msg="";render();
+ post("admin-cardapio-salvar",{token:S.token,data:a.data,secoes:secs}).then(function(r){a.salvando=false;
+  if(r&&r.ok){a.msg="✅ Cardápio salvo ("+r.itens+" itens).";a.mensagem=r.mensagem||"";a.salvo=true;acCarrega(a.data)}
+  else{a.erro=(r&&r.erro==="sem_permissao")?"Sem permissão.":"Não consegui salvar. Tente de novo.";render()}
+ }).catch(function(){a.salvando=false;a.erro="Não consegui salvar. Tente de novo.";render()})}
+function acCopia(){
+ var t=S.ac.mensagem||"";
+ function ok(){S.ac.msg="📋 Mensagem copiada. Cole no grupo do WhatsApp.";render()}
+ try{navigator.clipboard.writeText(t).then(ok).catch(function(){acSel()})}catch(e){acSel()}}
+function acSel(){var e=document.getElementById("acmsg");if(e){e.focus();e.select();S.ac.msg="Selecione e copie o texto."}}
+function vAdmin(){
+ var a=S.ac||{},h='<div class="pad"><h2>Cardápio do dia</h2>';
+ if(a.erro)h+='<div class="aviso">'+esc(a.erro)+'</div>';
+ if(a.msg)h+='<div class="aviso" style="background:#d1e7dd;color:#0f5132">'+esc(a.msg)+'</div>';
+ if(a.carregando||!a.secoes){return h+'<p>Carregando…</p></div>'}
+ var d=a.data,dw=DSEM[a.dow];
+ h+='<div class="peq">Data: <input type="date" value="'+esc(d)+'" onchange="acCarrega(this.value)"> · '+esc(dw)+(a.salvo?' · <b>já lançado</b>':'')+'</div>';
+ h+='<div style="margin:8px 0"><button class="btn" style="padding:6px 10px;font-size:13px" onclick="acCarrega(\''+d+'\',\''+somaDias(d,-1)+'\')">Copiar de ontem</button> <button class="btn" style="padding:6px 10px;font-size:13px" onclick="acCarrega(\''+d+'\',\''+somaDias(d,-7)+'\')">Mesmo dia da semana passada</button></div>';
+ if(!a.salvo&&!a.copiado)h+='<div class="peq">Itens que sempre têm e os típicos de '+esc(dw)+' já vêm marcados. Confira e ajuste.</div>';
+ if(a.copiado)h+='<div class="peq">Marcado com base em '+esc(a.copiado.split("-").reverse().join("/"))+'.</div>';
+ a.secoes.forEach(function(s,si){
+  var n=s.itens.filter(function(i){return i.marcado}).length;
+  h+='<details'+(s.key==="BUFFET"||n?' open':'')+' style="margin:10px 0"><summary><b>'+esc(s.titulo)+'</b> (<span id="acn'+si+'">'+n+'</span>)</summary>';
+  s.itens.forEach(function(i,ii){
+   var dica="";
+   if(!i.marcado||!a.salvo){
+    if(i.freq_dia!=null&&i.freq_dia>=50&&i.motivo!=="dia"&&!i.marcado)dica='costuma ter às '+esc(dw)+'s';
+    else if(!i.marcado&&i.visto)dica='visto em '+esc(String(i.visto).slice(5).split("-").reverse().join("/"));
+   }
+   h+='<label class="ck"><input type="checkbox" '+(i.marcado?"checked":"")+' onchange="acTog('+si+','+ii+',this.checked)"> '+esc(i.nome)+(i.novo?' <small>(novo)</small>':'')+(dica?' <small style="color:#777">· '+dica+'</small>':'')+'</label>';
+  });
+  h+='<div style="margin-top:6px"><input id="acnv'+si+'" placeholder="+ novo item" style="padding:6px;width:60%"> <button class="btn" style="padding:6px 10px;font-size:13px" onclick="acNovo('+si+')">Adicionar</button></div></details>';
+ });
+ h+='<button class="btn" style="display:block;width:100%;margin:14px 0" onclick="acSalvar()">'+(a.salvando?"Salvando…":(a.salvo?"Salvar alterações":"Salvar cardápio"))+'</button>';
+ if(a.mensagem){h+='<h2>Mensagem do WhatsApp</h2><textarea id="acmsg" readonly style="width:100%;height:320px;font-size:14px">'+esc(a.mensagem)+'</textarea><button class="btn" style="display:block;width:100%;margin:8px 0" onclick="acCopia()">Copiar mensagem</button>'}
+ else h+='<div class="peq">Depois de salvar, a mensagem aparece aqui para copiar.</div>';
+ return h+'</div>'}
 function vPedidos(){
  if(REAL&&S.token&&S.meus)return vPedidosBanco();
  var h='<header>Meus pedidos</header><div class="pad">';
@@ -404,6 +472,7 @@ function render(){
  else if(v==="done")h=vDone();
  else if(v==="pedidos")h=vPedidos();
  else if(v==="login")h=vLogin();
+ else if(v==="admin"&&S.admin)h=vAdmin();
  if(REAL&&S.token&&S.telDig)h='<div class="logado"><span>📱 '+(S.nome?esc(S.nome.split(" ")[0])+' · ':'')+esc(telFmt(S.telDig))+'</span><button class="rm" onclick="sair()">Sair</button></div>'+h;
  if(NOVA)h='<div class="aviso" style="background:#d1e7dd;color:#0f5132;cursor:pointer;font-size:14px;text-align:center" onclick="atualizaApp()"><b>🔄 Nova versão do app — toque aqui para atualizar</b></div>'+h;
  if(!REAL){h='<div class="aviso">EXEMPLO — dados de mentira, nada aqui vai para o restaurante.</div>'+h}
@@ -411,7 +480,7 @@ function render(){
  if(v==="menu"&&q>0&&!S.sheet){var tb=totais(S.cart,0);tb.sub+=valTalh();h+='<div class="barra" onclick="ir(\'checkout\')"><span>🛒 '+q+(q===1?" item":" itens")+'</span><b>Fechar pedido</b><span>'+brl(tb.sub)+(tb.pend?'<small>+ pesagem</small>':'')+'</span></div>'}
  if(S.sheet)h+=vSheet();
  $("#app").innerHTML=h;
- var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];
+ var tabs=[["home","Início"],["cart","Carrinho"+(q?" ("+q+")":"")],["pedidos","Pedidos"]];if(S.admin)tabs.push(["admin","Cardápio"]);
  $("#nav").innerHTML=tabs.map(function(t){var on=(v===t[0])||(t[0]==="home"&&(v==="menu"))||(t[0]==="cart"&&v==="checkout")||(t[0]==="pedidos"&&v==="done");return '<button class="'+(on?"on":"")+'" onclick="ir(\''+t[0]+'\')">'+t[1]+'</button>'}).join("");
 }
 /* ===== Cardápio real (n8n -> Postgres). Se falhar, mostra a tela "chame o restaurante no WhatsApp" ===== */
@@ -436,7 +505,7 @@ function aplicaApi(d){
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
  S.grupo=G[0].id;REAL=true;STATUS="ok";
 }
-if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
+if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render();checaAdmin()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
 if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";track("falha_cardapio",{motivo:"demora"});render()}},12000);
 
 render();

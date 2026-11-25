@@ -19,3 +19,4 @@ Observações
 - Os nomes (`carniel_*`) são do restaurante; em outro projeto, trocar o prefixo e adaptar as regras.
 - Contexto geral do app: ../docs/CONTEXTO.md
 - `11_relatorio_dia_app.sql` — relatório das 14h ganha o bloco "📱 App de pedidos" (pedidos pelo app, clientes, aparelhos que abriram/instalaram).
+- `14_admin_cardapio.sql` — aba "Cardápio do dia" (só ADMIN): funções `app_admin_cardapio_dados_carniel`, `app_admin_cardapio_salvar_carniel`, `mensagem_cardapio_dia_carniel`. Rode antes de usar a aba.
