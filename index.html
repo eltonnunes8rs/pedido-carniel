@@ -86,8 +86,8 @@ var BUFFET_ID={};
 /* ===== ESTADO ===== */
 var S={view:"home",modo:null,grupo:"ofertas",cart:[],sheet:null,end:{apelido:"",bairro:"Na cidade",rua:"",num:"",comp:""},pag:"Pix",troco:"",talh:0,pedidos:[],enderecos:[],ultimo:null};
 try{S.pedidos=JSON.parse(localStorage.getItem("pc_pedidos")||"[]");S.enderecos=JSON.parse(localStorage.getItem("pc_end")||"[]");}catch(e){}
-try{S.token=localStorage.getItem("pc_token")||"";S.nome=localStorage.getItem("pc_nome")||"";S.telDig=localStorage.getItem("pc_tel")||""}catch(e){S.token="";S.nome="";S.telDig=""}
-S.loginPasso="tel";S.msg="";S.zapBtn=false;S.volta="checkout";S.meus=null;S.meusCarregando=false;S.enviando=false;S.chave=null;S.nomeDig="";S.codigoDig="";
+try{S.token=localStorage.getItem("pc_token")||"";S.nome=localStorage.getItem("pc_nome")||"";S.telDig=localStorage.getItem("pc_tel")||"";S.telOk=!S.token&&localStorage.getItem("pc_telok")==="1"&&!!S.telDig}catch(e){S.token="";S.nome="";S.telDig=""}
+S.loginPasso="tel";S.msg="";S.zapBtn=false;S.telEnv=false;S.telMsg="";S.codigoPara="";S.preEnv=false;S.codigoErro="";S.volta="checkout";S.meus=null;S.meusCarregando=false;S.enviando=false;S.chave=null;S.nomeDig="";S.codigoDig="";
 function post(p,b){return fetch(BASE+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}).then(function(r){return r.json()})}
 function devId(){try{var d=localStorage.getItem("pc_dev");if(!d){d=Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem("pc_dev",d)}return d}catch(e){return"sem-storage"}}
 /* métricas: nunca atrapalha o app; não registra em modo de teste (?exemplo, ?falha, ?fechado) */
@@ -115,12 +115,12 @@ function ir(v){
  S.view=v;
  if(v==="pedidos")carregaMeus();
  if(v==="admin"&&S.admin&&!(S.ac&&S.ac.secoes))acCarrega(S.ac&&S.ac.data);
- if(v==="checkout")carregaEnderecos();
+ if(v==="checkout"){carregaEnderecos();preEnviaCodigo()}
  render();window.scrollTo(0,0)}
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-25.2";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-25.3";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -153,6 +153,7 @@ function vInstalar(){
 function vHome(){
  var H=hr(),h='<header><span><img class="logo" src="logo.png" alt="">Restaurante Carniel</span><small>'+(ABERTO?"Aberto para pedidos":"Fechado")+'</small></header><div class="pad">';
  if(ABERTO){
+  if(REAL&&!S.token)h+=vCaixaTel();
   h+='<h2>Como quer receber?</h2>';
   if(ENTREGA_OK)h+='<button class="btn" onclick="escolherModo(\'Entrega\')">🛵 Entrega</button>';
   h+='<button class="btn" onclick="escolherModo(\'Retirada\')">🏪 Retirada</button>';
@@ -234,6 +235,7 @@ function vCheckout(){
  h+='<div class="box"><b>Seu pedido</b>';
  S.cart.forEach(function(l){h+='<div class="linha"><span>'+l.qtd+'x '+esc(l.nome)+'</span><span>'+(l.preco==null?'a pesar':brl(l.preco*l.qtd))+'</span></div>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')});
  h+='<button class="rm" onclick="ir(\'cart\')">Alterar itens</button></div>';
+ if(REAL&&!S.token)h+=vCaixaCodigo();
  if(S.modo==="Entrega"){
   h+='<h2>Endereço</h2>';
   S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+' <b onclick="event.stopPropagation();apagaEnd('+k+')" style="margin-left:6px">✕</b></span>'});
@@ -285,7 +287,7 @@ function finalizar(){
  if(S.enviando)return;
  var t=totCart();
  if(!REAL){var num=100+S.pedidos.length+1;concluir(num,t);return}
- if(!S.token){S.loginPasso="tel";S.msg="";S.volta="checkout";ir("login");return}
+ if(!S.token){S.msg="";S.loginPasso="tel";S.volta="checkout";if(S.telOk&&S.codigoPara)alert("Falta só confirmar o seu WhatsApp: digite o código que mandamos, no quadro lá em cima.");else if(S.telOk)preEnviaCodigo(true);else alert("Falta só confirmar o seu WhatsApp, no quadro lá em cima.");window.scrollTo(0,0);render();return}
  if(!S.nome&&!S.nomeDig.trim()){alert("Escreva o seu nome.");return}
  if(S.cart.some(function(l){return !l.pers&&!l.ref})){S.cart=[];salvar();alert("O seu carrinho era de uma versão antiga. Monte o pedido de novo.");ir("menu");return}
  if(!S.chave)S.chave=String(Date.now())+Math.random().toString(36).slice(2,8);
@@ -321,6 +323,59 @@ function vLogin(){
  if(S.zapBtn)h+='<a class="btn" style="display:block;text-align:center;text-decoration:none" href="https://wa.me/'+ZAP+'?text='+encodeURIComponent("Oi! Quero fazer um pedido.")+'" onclick="track(\'clicou_zap\',{de:\'login\'})">Chamar o restaurante no WhatsApp</a>';
  return h+'<button class="rm" onclick="ir(S.volta||\'checkout\')">Voltar</button></div>';
 }
+/* ===== Telefone no começo (reconhece convênio) e código já no checkout ===== */
+function telDigs(){return String(S.telDig||"").replace(/\D/g,"")}
+function telValido(){return telDigs().length>=10}
+function aplicaConv(c){if(S.token)return;S.convenio=!!c;if(c)S.pag="Convênio";else if(S.pag==="Convênio")S.pag="Pix"}
+function confirmaTel(depois){
+ if(S.telEnv)return;
+ if(!telValido()){S.telMsg="Confira o número, com DDD.";render();return}
+ S.telEnv=true;S.telMsg="";render();
+ post("telefone",{tel:S.telDig,dev:devId()}).then(function(r){S.telEnv=false;
+  if(r&&r.ok){S.telOk=true;try{localStorage.setItem("pc_tel",S.telDig);localStorage.setItem("pc_telok","1")}catch(e){}aplicaConv(r.convenio===true);track("informou_tel",{convenio:r.convenio===true});render();if(depois)depois();return}
+  S.telMsg=r&&r.motivo==="telefone_invalido"?"Confira o número, com DDD.":"Não consegui conferir agora. Tente de novo.";render()
+ }).catch(function(){S.telEnv=false;S.telMsg="Sem conexão. Tente de novo.";render()})}
+function checaTel(){
+ if(!REAL||S.token||!S.telOk||!telValido())return;
+ post("telefone",{tel:S.telDig,dev:devId()}).then(function(r){if(r&&r.ok){aplicaConv(r.convenio===true);render()}}).catch(function(){})}
+function trocaTel(){S.telOk=false;S.codigoPara="";S.codigoDig="";S.msg="";aplicaConv(false);try{localStorage.removeItem("pc_telok")}catch(e){}render()}
+function preEnviaCodigo(forca){
+ if(!REAL||S.token||!S.telOk||!telValido()||S.preEnv)return;
+ var d=telDigs();
+ if(!forca&&S.codigoPara===d&&Date.now()-(S.codigoEm||0)<9*60000)return;
+ S.preEnv=true;S.msg="";S.codigoErro="";render();
+ post("codigo",{tel:S.telDig}).then(function(r){S.preEnv=false;
+  if(r&&r.ok){S.codigoPara=d;S.codigoEm=Date.now();S.codigoDig="";S.loginPasso="codigo";track("pre_codigo")}
+  else{S.codigoPara="";S.codigoErro=r&&(r.motivo==="muitos_codigos"||r.motivo==="limite_geral")?"Muitos códigos pedidos. Tente mais tarde ou chame o restaurante pelo WhatsApp.":(r&&r.motivo==="telefone_invalido"?"Confira o número, com DDD.":"Não consegui mandar o código. Toque em Reenviar.")}
+  render()}).catch(function(){S.preEnv=false;S.codigoErro="Sem conexão. Toque em Reenviar.";render()})}
+function vCaixaTel(){
+ var h='<div class="box">';
+ if(S.telOk){
+  h+='<div class="linha"><span>📱 '+esc(telFmt(S.telDig))+(S.convenio?' · <b>Convênio</b> ✔':'')+'</span><button class="rm" onclick="trocaTel()">Trocar</button></div>';
+ }else{
+  h+='<b>Seu WhatsApp</b><div class="peq">Assim reconhecemos o seu cadastro (convênio, endereços salvos) e o seu pedido sai mais rápido. Não enviamos nada agora.</div>'+
+   (S.telMsg?'<div class="aviso">'+esc(S.telMsg)+'</div>':'')+
+   '<input type="tel" inputmode="tel" placeholder="(46) 99999-9999" value="'+esc(S.telDig)+'" oninput="S.telDig=this.value">'+
+   '<button class="btn" onclick="confirmaTel()">'+(S.telEnv?"Conferindo…":"Continuar")+'</button>';
+ }
+ return h+'</div>'}
+function vCaixaCodigo(){
+ var h='<div class="box" id="caixacodigo">';
+ if(!S.telOk){
+  h+='<b>Último passo: confirmar o seu WhatsApp</b><div class="peq">É rápido e só na primeira vez. Mandamos um código de 6 números para o seu WhatsApp.</div>'+
+   (S.telMsg?'<div class="aviso">'+esc(S.telMsg)+'</div>':'')+
+   '<input type="tel" inputmode="tel" placeholder="(46) 99999-9999" value="'+esc(S.telDig)+'" oninput="S.telDig=this.value">'+
+   '<button class="btn" onclick="confirmaTel(function(){preEnviaCodigo(true)})">'+(S.telEnv?"Conferindo…":"Receber código")+'</button>';
+ }else if(S.codigoPara){
+  h+='<b>Último passo: digite o código</b><div class="peq">Mandamos 6 números para o seu WhatsApp ('+esc(telFmt(S.telDig))+'). É só desta vez: nas próximas você já entra direto.</div>'+
+   (S.msg?'<div class="aviso">'+esc(S.msg)+'</div>':'')+
+   '<input type="tel" inputmode="numeric" maxlength="6" placeholder="000000" value="'+esc(S.codigoDig)+'" oninput="S.codigoDig=this.value;if(this.value.length===6)entrar()">'+
+   '<button class="btn" onclick="entrar()">'+(S.enviando?"Conferindo…":"Confirmar")+'</button>'+
+   '<button class="rm" onclick="preEnviaCodigo(true)">Não chegou? Reenviar</button> <button class="rm" onclick="trocaTel()">Trocar número</button>';
+ }else{
+  h+='<b>Último passo: confirmar o seu WhatsApp</b>'+(S.preEnv?'<div class="peq">Enviando o código para o seu WhatsApp…</div>':'<div class="peq">'+esc(S.codigoErro||"Vamos mandar um código para o seu WhatsApp.")+'</div><button class="btn" onclick="preEnviaCodigo(true)">Receber código</button><button class="rm" onclick="trocaTel()">Trocar número</button>');
+ }
+ return h+'</div>'}
 function pedirCodigo(){
  if(S.enviando)return;S.enviando=true;S.msg="";render();
  post("codigo",{tel:S.telDig}).then(function(r){S.enviando=false;
@@ -334,7 +389,7 @@ function entrar(){
  post("entrar",{tel:S.telDig,codigo:S.codigoDig}).then(function(r){S.enviando=false;
   if(r&&r.ok){S.token=r.token;S.nome=r.nome||"";S.admin=false;S.ac=null;try{localStorage.setItem("pc_token",S.token);localStorage.setItem("pc_nome",S.nome)}catch(e){}S.msg="";track("logou");checaAdmin();var vv=S.volta||"checkout";S.volta="checkout";ir(vv);return}
   S.msg=r&&r.motivo==="codigo_errado"?"Código errado. Confira e tente de novo.":(r&&r.motivo==="codigo_expirado"?"O código venceu ou errou 3 vezes. Peça um novo.":"Não consegui entrar. Tente de novo.");
-  if(r&&r.motivo==="codigo_expirado")S.loginPasso="tel";
+  if(r&&r.motivo==="codigo_expirado"){S.loginPasso="tel";S.codigoPara=""}
   render()}).catch(function(){S.enviando=false;S.msg="Sem conexão. Tente de novo.";render()});
 }
 function copiaTexto(p){
@@ -506,7 +561,7 @@ function aplicaApi(d){
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
  S.grupo=G[0].id;REAL=true;STATUS="ok";
 }
-if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render();checaAdmin()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
+if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render();checaAdmin();checaTel()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
 if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";track("falha_cardapio",{motivo:"demora"});render()}},12000);
 
 render();

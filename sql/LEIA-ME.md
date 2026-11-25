@@ -20,3 +20,4 @@ Observações
 - Contexto geral do app: ../docs/CONTEXTO.md
 - `11_relatorio_dia_app.sql` — relatório das 14h ganha o bloco "📱 App de pedidos" (pedidos pelo app, clientes, aparelhos que abriram/instalaram).
 - `14_admin_cardapio.sql` — aba "Cardápio do dia" (só ADMIN): funções `app_admin_cardapio_dados_carniel`, `app_admin_cardapio_salvar_carniel`, `mensagem_cardapio_dia_carniel`. Rode antes de usar a aba.
+- `15_app_telefone.sql` — `app_telefone_carniel`: o app pergunta o WhatsApp no começo e reconhece convênio sem pedir código (devolve só sim/não, com trava de consultas). Rode antes de publicar o site com a caixa "Seu WhatsApp".
