@@ -120,7 +120,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-25.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-25.2";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -384,9 +384,10 @@ function acCarrega(data,copiar){
  S.ac=S.ac||{};S.ac.carregando=true;S.ac.msg="";S.ac.erro="";render();
  var b={token:S.token,data:data||S.ac.data||hojeBR()};if(copiar)b.copiar_de=copiar;
  post("admin-cardapio",b).then(function(r){S.ac.carregando=false;
-  if(r&&r.ok&&r.secoes){S.ac.data=r.data;S.ac.secoes=r.secoes;S.ac.salvo=r.salvo;S.ac.mensagem=r.mensagem||"";S.ac.copiado=r.copiado_de||"";S.ac.dow=r.dow}
+  if(r&&r.ok&&r.secoes){S.ac.data=r.data;S.ac.secoes=r.secoes;r.secoes.forEach(acOrdena);S.ac.salvo=r.salvo;S.ac.mensagem=r.mensagem||"";S.ac.copiado=r.copiado_de||"";S.ac.dow=r.dow}
   else{S.ac.erro=(r&&r.erro==="sem_permissao")?"Sem permissão.":"Não consegui abrir o cardápio do dia."}
   render()}).catch(function(){S.ac.carregando=false;S.ac.erro="Não consegui falar com o servidor.";render()})}
+function acOrdena(sec){sec.itens.sort(function(x,y){return String(x.nome).localeCompare(String(y.nome),"pt-BR",{sensitivity:"base"})})}
 function acTog(si,ii,v){var it=S.ac.secoes[si].itens[ii];it.marcado=!!v;acConta(si)}
 function acConta(si){var n=S.ac.secoes[si].itens.filter(function(i){return i.marcado}).length;var e=document.getElementById("acn"+si);if(e)e.textContent=n}
 function acObs(si,ii,v){S.ac.secoes[si].itens[ii].obs=v}
@@ -397,7 +398,7 @@ function acNovo(si){
  if(ex.length){ex[0].marcado=true;inp.value="";render();return}
  var sim=sec.itens.filter(function(i){var m=acNorm(i.nome);return m.indexOf(n)>=0||n.indexOf(m)>=0});
  if(sim.length&&!confirm('Já existe "'+sim[0].nome+'". Criar "'+nome+'" como item novo mesmo assim?'))return;
- sec.itens.unshift({id:null,nome:nome,marcado:true,novo:true});inp.value="";render()}
+ sec.itens.push({id:null,nome:nome,marcado:true,novo:true});acOrdena(sec);inp.value="";render()}
 function acSalvar(){
  var a=S.ac;if(a.salvando)return;
  var secs=a.secoes.map(function(s){return{key:s.key,itens:s.itens.filter(function(i){return i.marcado}).map(function(i){var o={obs:i.obs||null};if(i.id)o.id=i.id;else o.nome=i.nome;return o})}});
