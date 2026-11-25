@@ -24,7 +24,7 @@ CREATE OR REPLACE FUNCTION app_admin_ok_carniel(p_token text) RETURNS boolean
 LANGUAGE sql AS $$
  SELECT EXISTS (
    SELECT 1 FROM app_sessao_carniel(p_token) s
-   JOIN carniel_usuarios u ON right(regexp_replace(u.telefone_whatsapp,'\D','','g'),8) = right(regexp_replace(COALESCE(s.r_tel,''),'\D','','g'),10)
+   JOIN carniel_usuarios u ON right(regexp_replace(u.telefone_whatsapp,'\D','','g'),8) = right(regexp_replace(COALESCE(s.r_tel,''),'\D','','g'),8)
    WHERE s.r_ok AND u.ativo AND upper(u.perfil)='ADMIN')
 $$;
 
