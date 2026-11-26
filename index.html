@@ -120,7 +120,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-25.3";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-26.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -240,7 +240,7 @@ function vCheckout(){
   h+='<h2>Endereço</h2>';
   S.enderecos.forEach(function(e,k){h+='<span class="chip" onclick="usaEnd('+k+')">'+esc(e.apelido||e.rua)+' <b onclick="event.stopPropagation();apagaEnd('+k+')" style="margin-left:6px">✕</b></span>'});
   h+='<select onchange="S.end.bairro=this.value;render()">'+BAIRROS.map(function(b){return '<option '+(S.end.bairro===b.n?"selected":"")+'>'+esc(b.n)+'</option>'}).join("")+'<option value="'+COMBINAR+'" '+(S.end.bairro===COMBINAR?"selected":"")+'>Outro local — frete a combinar</option></select>'+(S.end.bairro===COMBINAR?'<div class="peq">Escreva a cidade ou o bairro no campo Complemento. Nós confirmamos o valor do frete com você no WhatsApp.</div>':'')+
-  '<input placeholder="Rua" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
+  '<input placeholder="RUA OU NOME DA EMPRESA, FÁBRICA OU LOCAL" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
   '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value;salvar()">'+
   '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
   '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
