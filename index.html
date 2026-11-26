@@ -120,7 +120,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-26.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-26.2";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -243,7 +243,7 @@ function vCheckout(){
   '<input placeholder="RUA OU NOME DA EMPRESA, FÁBRICA OU LOCAL" value="'+esc(S.end.rua)+'" oninput="S.end.rua=this.value;salvar()">'+
   '<input placeholder="Número" value="'+esc(S.end.num)+'" oninput="S.end.num=this.value;salvar()">'+
   '<input placeholder="Complemento (opcional)" value="'+esc(S.end.comp)+'" oninput="S.end.comp=this.value;salvar()">'+
-  '<input placeholder="Apelido deste endereço (casa, firma…) — opcional" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
+  '<input placeholder="NOME SÓ PARA VOCÊ SALVAR ESTE ENDEREÇO (casa, firma…) — opcional. NÃO É USADO NA ENTREGA" value="'+esc(S.end.apelido)+'" oninput="S.end.apelido=this.value;salvar()">';
  }
  if(REAL&&!S.nome)h+='<h2>Seu nome</h2><input placeholder="Como podemos te chamar?" value="'+esc(S.nomeDig)+'" oninput="S.nomeDig=this.value">';
  h+='<h2>Talheres</h2><select onchange="S.talh=Number(this.value);salvar();render()">'+[0,1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option value="'+n+'" '+(S.talh===n?"selected":"")+'>'+(n===0?"Não preciso de talheres":n+(n===1?" talher":" talheres")+" (+ "+brl(n*PRECO_TALHER)+")")+'</option>'}).join("")+'</select>';
