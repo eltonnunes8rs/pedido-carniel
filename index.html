@@ -120,7 +120,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-26.3";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-28.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -561,7 +561,8 @@ function aplicaApi(d){
  BAIRROS=[{n:"Na cidade",t:padrao}].concat((d.locais||[]).map(function(l){return{n:l.nome,t:Number(l.taxa)}}));
  S.grupo=G[0].id;REAL=true;STATUS="ok";
 }
-if(STATUS==="carregando")try{fetch(API).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render();checaAdmin();checaTel()}).catch(function(e){console.log("API falhou",e);STATUS="falha";track("falha_cardapio");render()})}catch(e){STATUS="falha"}
+function carregaCardapio(n){fetch(API).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json()}).then(function(d){try{aplicaApi(d);try{track("abriu",{ref:new URLSearchParams(location.search).get("o")||"",aberto:ABERTO,logado:!!S.token})}catch(e){}render();checaAdmin();checaTel()}catch(e){console.log("API aplicar falhou",e);STATUS="falha";track("falha_cardapio",{motivo:"aplica: "+String(e&&e.message||e).slice(0,60)});render()}},function(e){if(n<1){setTimeout(function(){carregaCardapio(n+1)},1200);return}console.log("API falhou",e);STATUS="falha";track("falha_cardapio",{motivo:String(e&&e.message||e).slice(0,80),tentativas:n+1});render()})}
+if(STATUS==="carregando")try{carregaCardapio(0)}catch(e){STATUS="falha"}
 if(STATUS==="carregando")setTimeout(function(){if(STATUS==="carregando"){STATUS="falha";track("falha_cardapio",{motivo:"demora"});render()}},12000);
 
 render();
