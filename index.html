@@ -120,7 +120,7 @@ function ir(v){
 
 /* ===== TELAS ===== */
 /* ===== Versão e aviso de atualização (o app instalado confere se há versão nova) ===== */
-var VERSAO="2026-11-28.1";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
+var VERSAO="2026-11-28.2";   // MUDAR a cada publicação: é isso que faz o app instalado avisar
 var NOVA=false;
 function confereVersao(){
  if(location.protocol!=="https:")return;
@@ -181,13 +181,14 @@ function vMenu(){
 }
 function abrirItem(gid,iid){
  var g=grupoDe(gid),it=g.itens.filter(function(x){return String(x.id)===String(iid)})[0];
- S.sheet={gid:gid,item:it,pers:g.tipo==="pers",qtd:1,obs:"",marcados:[],esc:null,opcoes:g.escolha||null};render();
+ S.sheet={gid:gid,item:it,pers:g.tipo==="pers",pessoas:1,qtd:1,obs:"",marcados:[],esc:null,opcoes:g.escolha||null};render();
 }
 function vSheet(){
  var s=S.sheet,h='<div class="sheetbg"><div class="sheet"><h2>'+esc(s.item.nome)+'</h2>';
  if(s.pers){
   h+='<div class="peq">Itens do buffet de hoje — marque o que quiser:</div>';
   BUFFET_HOJE.forEach(function(n,k){h+='<label class="ck"><input type="checkbox" '+(s.marcados.indexOf(n)>=0?"checked":"")+' onchange="marcar(\''+n.replace(/'/g,"\\'")+'\')"> '+esc(n)+'</label>'});
+ h+='<div class="peq" style="margin-top:12px"><b>Pessoas</b> (para quantas pessoas é esta marmita?)</div><div class="qty"><button onclick="mudaPes(-1)">−</button><span>'+s.pessoas+'</span><button onclick="mudaPes(1)">+</button></div>';
  }
  if(s.opcoes){h+='<div class="peq">Escolha:</div>';s.opcoes.forEach(function(o){h+='<label class="ck"><input type="radio" name="esc" '+(s.esc===o?'checked':'')+' onchange="S.sheet.esc=\''+o+'\'"> '+o+'</label>'})}
  if(!s.pers)h+='<div class="qty"><button onclick="mudaQtd(-1)">−</button><span>'+s.qtd+'</span><button onclick="mudaQtd(1)">+</button></div>';
@@ -198,16 +199,18 @@ function vSheet(){
 }
 function editaPers(k){
  var l=S.cart[k];if(!l)return;
- S.sheet={gid:"pers",item:{id:"PERS",nome:"Personalizada",preco:null,ref:l.ref},pers:true,qtd:1,obs:l.obs||"",marcados:l.marcados.slice(),esc:null,opcoes:null,edit:k};render();
+ S.sheet={gid:"pers",item:{id:"PERS",nome:"Personalizada",preco:null,ref:l.ref},pers:true,pessoas:l.pessoas||1,qtd:1,obs:l.obs||"",marcados:l.marcados.slice(),esc:null,opcoes:null,edit:k};render();
 }
 function marcar(n){var m=S.sheet.marcados,k=m.indexOf(n);if(k>=0)m.splice(k,1);else m.push(n)}
+function mudaPes(d){S.sheet.pessoas=Math.min(50,Math.max(1,S.sheet.pessoas+d));render()}
+function pesTxt(l){return l.pers?"Para "+(l.pessoas||1)+((l.pessoas||1)>1?" pessoas":" pessoa"):""}
 function mudaQtd(d){S.sheet.qtd=Math.max(1,S.sheet.qtd+d);var o=S.sheet.obs;render();}
 function inserir(){
  var s=S.sheet;
  if(s.opcoes&&!s.esc){alert("Escolha: "+s.opcoes.join(" ou ")+".");return}
  if(s.pers&&s.marcados.length===0){alert("Marque pelo menos um item do buffet.");return}
- if(s.edit!=null&&S.cart[s.edit]){S.cart[s.edit].marcados=s.marcados.slice();S.cart[s.edit].obs=s.obs.trim();track("item_edit",{nome:"Personalizada"});S.sheet=null;render();return}
- S.cart.push({ref:s.item.ref,esc:s.esc,nome:s.item.nome+(s.esc?" ("+s.esc.toLowerCase()+")":""),preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers});
+ if(s.edit!=null&&S.cart[s.edit]){S.cart[s.edit].marcados=s.marcados.slice();S.cart[s.edit].pessoas=s.pessoas;S.cart[s.edit].obs=s.obs.trim();track("item_edit",{nome:"Personalizada"});S.sheet=null;render();return}
+ S.cart.push({ref:s.item.ref,esc:s.esc,nome:s.item.nome+(s.esc?" ("+s.esc.toLowerCase()+")":""),preco:s.item.preco,qtd:s.pers?1:s.qtd,obs:s.obs.trim(),marcados:s.marcados.slice(),pers:s.pers,pessoas:s.pers?s.pessoas:undefined});
  renum();track("item_add",{nome:s.item.nome,pers:!!s.pers});S.sheet=null;render();
 }
 /* Personalizadas: 1 só = "Personalizada"; 2 ou mais = "Personalizada 1", "Personalizada 2"... */
@@ -216,7 +219,7 @@ function vCart(){
  var h='<header>Carrinho<small>'+(S.modo||'')+'</small></header><div class="pad">';
  if(!S.cart.length){return h+'<p>Seu carrinho está vazio.</p><button class="btn sec" onclick="ir(\'menu\')">Ver o cardápio</button></div>'}
  S.cart.forEach(function(l,k){
-  h+='<div class="box"><b>'+esc(l.nome)+'</b>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')+
+  h+='<div class="box"><b>'+esc(l.nome)+'</b>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.pers?'<div class="peq">'+pesTxt(l)+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')+
   (l.pers?'<div class="linha"><span><button class="rm" onclick="editaPers('+k+')" style="font-size:15px;font-weight:700;margin-right:18px">Editar</button><button class="rm" onclick="cartQtd('+k+',-1)">Remover</button></span><span style="font-size:15px">valor na pesagem</span></div></div>':'<div class="qty"><button onclick="cartQtd('+k+',-1)">−</button><span>'+l.qtd+'</span><button onclick="cartQtd('+k+',1)">+</button><span style="margin-left:auto;font-size:15px">'+(l.preco==null?'valor na pesagem':brl(l.preco*l.qtd))+'</span></div></div>');
  });
  h+='<div class="peq">Quer adicionar alguma bebida?</div>';
@@ -233,7 +236,7 @@ function addBebida(id){var b=grupoDe("bebidas").itens.filter(function(x){return 
 function vCheckout(){
  var h='<header>Fechar pedido<small>'+(S.modo||'')+'</small></header><div class="pad">';
  h+='<div class="box"><b>Seu pedido</b>';
- S.cart.forEach(function(l){h+='<div class="linha"><span>'+l.qtd+'x '+esc(l.nome)+'</span><span>'+(l.preco==null?'a pesar':brl(l.preco*l.qtd))+'</span></div>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')});
+ S.cart.forEach(function(l){h+='<div class="linha"><span>'+l.qtd+'x '+esc(l.nome)+'</span><span>'+(l.preco==null?'a pesar':brl(l.preco*l.qtd))+'</span></div>'+(l.marcados.length?'<div class="peq">'+esc(l.marcados.join(", "))+'</div>':'')+(l.pers?'<div class="peq">'+pesTxt(l)+'</div>':'')+(l.obs?'<div class="peq">Obs: '+esc(l.obs)+'</div>':'')});
  h+='<button class="rm" onclick="ir(\'cart\')">Alterar itens</button></div>';
  if(REAL&&!S.token)h+=vCaixaCodigo();
  if(S.modo==="Entrega"){
@@ -292,17 +295,17 @@ function finalizar(){
  if(S.cart.some(function(l){return !l.pers&&!l.ref})){S.cart=[];salvar();alert("O seu carrinho era de uma versão antiga. Monte o pedido de novo.");ir("menu");return}
  if(!S.chave)S.chave=String(Date.now())+Math.random().toString(36).slice(2,8);
  var dados={chave:S.chave,nome:S.nome||S.nomeDig.trim(),modo:S.modo,end:S.modo==="Entrega"?S.end:null,pag:S.pag,troco:S.troco,talheres:S.talh,
-  itens:S.cart.map(function(l){return l.pers?{k:"pers",marcados:l.marcados.map(function(n){return BUFFET_ID[n]}),obs:l.obs}:{k:l.ref.k,nome:l.ref.nome,chave:l.ref.chave,id:l.ref.id,esc:l.esc,qtd:l.qtd,obs:l.obs}})};
+  itens:S.cart.map(function(l){return l.pers?{k:"pers",marcados:l.marcados.map(function(n){return BUFFET_ID[n]}),obs:pesTxt(l)+(l.obs?" — "+l.obs:"")}:{k:l.ref.k,nome:l.ref.nome,chave:l.ref.chave,id:l.ref.id,esc:l.esc,qtd:l.qtd,obs:l.obs}})};
  S.enviando=true;render();
  post("pedido",{token:S.token,dados:dados}).then(function(r){
   S.enviando=false;
-  if(r&&r.ok){track("enviou",{numero:r.numero,modo:S.modo,pag:S.pag});if(!S.nome&&S.nomeDig){S.nome=S.nomeDig.trim();try{localStorage.setItem("pc_nome",S.nome)}catch(e){}}S.chave=null;concluir(r.numero,t);return}
+  if(r&&r.ok){track("enviou",{numero:r.numero,modo:S.modo,pag:S.pag});if(!S.nome&&S.nomeDig){S.nome=S.nomeDig.trim();try{localStorage.setItem("pc_nome",S.nome)}catch(e){}}S.chave=null;concluir(r.numero,t,r.pix);return}
   if(r&&r.motivo==="sessao_invalida"){S.token="";try{localStorage.removeItem("pc_token")}catch(e){}S.loginPasso="tel";S.msg="Entre de novo com o seu telefone.";ir("login");return}
   track("erro_pedido",{motivo:(r&&r.motivo)||"sem_resposta"});alert(msgErro(r&&r.motivo));render();
  }).catch(function(){S.enviando=false;alert(msgErro());render()});
 }
-function concluir(num,t){
- var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,talh:S.talh,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",quando:new Date().toISOString()};
+function concluir(num,t,pix){
+ var p={id:num,itens:S.cart.slice(),modo:S.modo,end:S.modo==="Entrega"?JSON.parse(JSON.stringify(S.end)):null,pag:S.pag,troco:S.troco,talh:S.talh,sub:t.sub,taxa:t.taxa,total:t.total,pend:t.pend,status:"Recebido",pix:pix||null,quando:new Date().toISOString()};
  if(p.end){var ja=S.enderecos.some(function(e){return e.rua===p.end.rua&&e.num===p.end.num&&e.bairro===p.end.bairro});if(!ja)S.enderecos.push(JSON.parse(JSON.stringify(p.end)));salvaEndBanco(p.end)}
  S.pedidos.unshift(p);S.ultimo=p;S.cart=[];salvar();ir("done");
 }
@@ -394,7 +397,7 @@ function entrar(){
 }
 function copiaTexto(p){
  var l=["Pedido #"+p.id];
- p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
+ p.itens.forEach(function(i){l.push(i.qtd+"x "+i.nome+(i.marcados.length?": "+i.marcados.join(", "):"")+(i.pers?" ["+pesTxt(i)+"]":"")+(i.obs?" ("+i.obs+")":"")+(i.preco==null?" — valor na pesagem":""))});
  l.push(p.modo==="Entrega"?"Entrega: "+p.end.rua+", "+p.end.num+(p.end.comp?" - "+p.end.comp:"")+" - "+p.end.bairro:"Retirada no restaurante");
  if(p.talh>0)l.push(p.talh+"x Talheres");l.push("Pagamento: "+p.pag+(p.pag==="Dinheiro"&&p.troco?" (troco para "+p.troco+")":""));
  if(p.modo==="Entrega"){l.push("Itens: "+brl(p.sub));l.push("Taxa de entrega: "+(p.end.bairro===COMBINAR?"a combinar":brl(p.taxa)))}
@@ -404,7 +407,22 @@ function copiaTexto(p){
 }
 function vDone(){
  var p=S.ultimo;
- return '<header>Pedido enviado ✅</header><div class="pad"><h2>Pedido #'+p.id+' recebido</h2><p>Já está no sistema e na impressora da cozinha. Você vai receber uma cópia no WhatsApp:</p><pre>'+esc(copiaTexto(p))+'</pre><button class="btn" onclick="ir(\'pedidos\')">Ver meus pedidos</button></div>';
+ return '<header>Pedido enviado ✅</header><div class="pad"><h2>Pedido #'+p.id+' recebido</h2><p>Já está no sistema e na impressora da cozinha. Você vai receber uma cópia no WhatsApp:</p><pre>'+esc(copiaTexto(p))+'</pre>'+vPix(p)+'<button class="btn" onclick="ir(\'pedidos\')">Ver meus pedidos</button></div>';
+}
+function vPix(p){
+ var x=p.pix;if(!x||!x.codigo)return"";
+ var h='<div class="box" style="border-color:#6b2832"><b>💳 Pagamento por Pix</b>';
+ if(x.modo==="copia")h+='<div class="peq">Valor: '+brl(Number(x.valor)||0)+'. Copie o código, cole no app do seu banco (Pix copia e cola) e depois mande o comprovante no WhatsApp.</div>';
+ else h+='<div class="peq">O valor final será confirmado pela equipe (frete ou pesagem). Depois de confirmado, pague na chave abaixo e mande o comprovante no WhatsApp.</div>';
+ h+='<textarea id="pixcod" readonly rows="'+(x.modo==="copia"?4:1)+'" style="width:100%;margin-top:8px;font-size:13px" onclick="this.select()">'+esc(x.codigo)+'</textarea>';
+ h+='<button class="btn" onclick="copiaPix()">'+(x.modo==="copia"?"Copiar Pix":"Copiar chave Pix")+'</button><div class="peq" id="pixok" style="text-align:center"></div></div>';
+ return h;
+}
+function copiaPix(){
+ var t=document.getElementById("pixcod");if(!t)return;var v=t.value;
+ function ok(){var o=document.getElementById("pixok");if(o)o.textContent="Copiado! Agora é só colar no app do seu banco."}
+ function velho(){try{t.focus();t.select();t.setSelectionRange(0,99999);document.execCommand("copy");ok()}catch(e){}}
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(ok,velho);else velho();
 }
 function quandoTxt(q){if(!q)return"";var d=new Date(q);if(isNaN(d))return"";function z(n){return(n<10?"0":"")+n}return z(d.getDate())+"/"+z(d.getMonth()+1)+"/"+d.getFullYear()+" às "+z(d.getHours())+":"+z(d.getMinutes())}
 var ST_TXT={RECEBIDO:"Recebido",EM_PREPARO:"Em preparo",ENTREGUE:"Entregue",CANCELADO:"Cancelado"};
